@@ -1,0 +1,22 @@
+/* Plissé — Regular 400, Medium 500, SemiBold 600, Bold 700 (upright and italic). Paths are relative to this file. */
+@font-face {
+  font-family: "Plisse";
+  src: url("Plisse[wght].woff2") format("woff2-variations"), url("Plisse[wght].woff2") format("woff2");
+  font-weight: 400 700;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Plisse";
+  src: url("Plisse-Italic[wght].woff2") format("woff2-variations"), url("Plisse-Italic[wght].woff2") format("woff2");
+  font-weight: 400 700;
+  font-style: italic;
+  font-display: swap;
+}
+
+:root {
+  --font-plisse: "Plisse", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+/* Prices and tables: tabular figures keep the columns straight. */
+.plisse-tabular { font-variant-numeric: tabular-nums; }
