@@ -1,18 +1,19 @@
 #!/usr/bin/env python3
-"""Lamina 3 — built on Hanken Grotesk (Alfredo Marco Pradil, Hanken Design Co., OFL).
+"""Lamina 4 — built on Instrument Sans (Rodrigo Fuenzalida, Jordan Egstad; OFL).
 
     python3 lamina/src/build.py            # masters, variable font, statics, WOFF2, CSS
     python3 lamina/src/build.py --masters  # only the edited UFO masters
-    LAMINA_WITHOUT=flank,tile,space ...    # control builds for the specimen
+    LAMINA_WITHOUT=tile,space,forms ...    # control builds for the specimen
 
 Pipeline
-  1. Hanken Grotesk sources (.glyphs: Thin, Regular, Black; upright and italic)
-  2. two masters interpolated at 400 and 700
+  1. Instrument Sans sources (.glyphs: wdth 75–100 × wght 400–700; upright and italic)
+  2. two masters interpolated at width 97, weight 430 and 700 — measured
+     against ABC Diatype: the same stem, the same set width
   3. Lamina edits on both masters (identical, so they stay compatible):
-       space  — lowercase and figures set closer, to Diatype's proportions
+       forms  — the open R and the full-stroke $ ¢ become the default
        tile   — every dot becomes a small stone tile with bent corners
-       flank  — curves that turn vertical get slightly longer handles
-       liga   — arrow ligatures moved from liga to dlig
+       space  — lowercase set a little closer
+       liga   — arrow and www ligatures moved from liga to dlig
        names  — new family name, upstream attribution kept
   4. variable font (wght 400–700), static 400/500/600/700, hinted, WOFF2
 """
@@ -31,13 +32,15 @@ HERE = Path(__file__).resolve().parent
 ROOT = HERE.parent
 BUILD = ROOT / "build"
 FONTS = ROOT / "fonts"
-UPSTREAM = {False: ROOT / "sources" / "upstream" / "HankenGrotesk.glyphs",
-            True: ROOT / "sources" / "upstream" / "HankenGrotesk-Italic.glyphs"}
+UPSTREAM = {False: ROOT / "sources" / "upstream" / "InstrumentSans.glyphs",
+            True: ROOT / "sources" / "upstream" / "InstrumentSans-Italic.glyphs"}
 sys.path.insert(0, str(HERE))
 
 FAMILY = "Lamina"
-VERSION = (3, 0)
-W400, W700 = 400.0, 700.0
+VERSION = (4, 0)
+# upstream locations of Lamina's two masters (design coordinates)
+W400, W700 = 430.0, 700.0
+WIDTH = 96.875            # user wdth 97 through the upstream axis map 88→87.5
 WEIGHTS = [("Regular", 400), ("Medium", 500), ("SemiBold", 600), ("Bold", 700)]
 WITHOUT = set(filter(None, os.environ.get("LAMINA_WITHOUT", "").split(",")))
 
@@ -69,7 +72,7 @@ def base_masters(italic=False):
         i = InstanceDescriptor()
         i.familyName, i.styleName = "Base", name
         i.filename = str(out / f"Base-{name}.ufo")
-        i.location = {"Weight": wt}
+        i.location = {"Weight": wt, "Width": WIDTH}
         doc.addInstance(i)
     tmp = upstream_designspace(italic).parent / f"base-{tag}.designspace"
     doc.write(tmp)

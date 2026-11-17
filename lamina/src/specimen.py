@@ -29,16 +29,6 @@ def word_paths(font_path, word, scale=1.0):
     return out, x
 
 
-def flank_svg(word="GOOD08"):
-    """Lamina filled; the same letters without the flank drawn as a hairline."""
-    ink, w = word_paths(ROOT / "fonts" / "ttf" / "Lamina-Regular.ttf", word)
-    ghost, _ = word_paths(ROOT / "build" / "control" / "noflank.ttf", word)
-    a = "".join(f'<path d="{d}"/>' for d in ink)
-    b = "".join(f'<path d="{d}"/>' for d in ghost)
-    return (f'<svg viewBox="-20 -760 {w + 40} 800" role="img" aria-label="{word}: Lamina z flankami i obrys bazy bez nich">'
-            f'<g transform="scale(1,-1)"><g class="ink">{a}</g><g class="ghost">{b}</g></g></svg>')
-
-
 def glyph_count():
     return len(TTFont(ROOT / "fonts" / "ttf" / "Lamina-Regular.ttf").getBestCmap())
 
@@ -52,6 +42,7 @@ PAGE = r'''<meta charset="utf-8">
 @font-face{font-family:"Lamina";src:url(data:font/woff2;base64,__VFI__) format("woff2");font-weight:400 700;font-style:italic;font-display:block}
 @font-face{font-family:"NoTile";src:url(data:font/woff2;base64,__NT__) format("woff2");font-weight:400 700;font-display:block}
 @font-face{font-family:"Upstream";src:url(data:font/woff2;base64,__UP__) format("woff2");font-weight:400 700;font-display:block}
+@font-face{font-family:"NoForms";src:url(data:font/woff2;base64,__NF__) format("woff2");font-weight:400 700;font-display:block}
 :root{
   --wall:#f5f5f3; --panel:#ffffff; --ink:#222220; --muted:#6b6a66; --rule:#dcdcd8; --stone:#a88e68; --dark:#0e0e0d; --on-dark:#ffffff;
   --font:"Lamina",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
@@ -151,7 +142,7 @@ footer a{color:inherit}
 <section class="hero">
   <span class="label">Krój pisma Murèlle i Lamelio</span>
   <h1 class="mark">Lamina</h1>
-  <p class="idea">Ciepły, precyzyjny grotesk w temperaturze ABC Diatype: złożony ciasno jak ściana z lamel, z kropkami jak małe płytki kamienia.</p>
+  <p class="idea">Ciepły, precyzyjny grotesk w temperaturze ABC Diatype: brzuśce okrągłe jak arkusz kamienia owinięty wokół słupa, rytm równy jak ściana z lamel. Kropki są małymi płytkami kamienia.</p>
   <div class="meta"><span>400–700, font zmienny</span><span>prosty i kursywa</span><span>__COUNT__ znaków</span><span>pełna polszczyzna</span><span>licencja OFL</span></div>
   <div class="names">
     <div><b style="font-weight:400">Murèlle</b><span>400 Regular</span></div>
@@ -163,8 +154,8 @@ footer a{color:inherit}
 
 <section>
   <div class="head"><span class="label">Skąd się wziął</span>
-  <h2>Zbudowany na Hanken Grotesk, najbliższym Diatype otwartym kroju</h2></div>
-  <p class="lede">Porównaliśmy z Diatype ponad pięćdziesiąt otwartych grotesków, na tej samej planszy i w tych samych proporcjach. Najbliżej był Hanken Grotesk (Alfredo Marco Pradil, Hanken Design Co., licencja OFL): G z ostrogą i poprzeczką, R z prostą nogą, ukośnie cięte t, y z prostym ogonem, jednopiętrowe g, 1 z flagą bez stopki, zamknięte 4, okrągłe O. Lamina dociąga go do Diatype tam, gdzie da się to zmierzyć, i dodaje własny detal.</p>
+  <h2>Zbudowany na Instrument Sans, najokrąglejszym bliskim Diatype otwartym kroju</h2></div>
+  <p class="lede">Zestawiliśmy z planszą Diatype ponad dziewięćdziesiąt otwartych grotesków, litera przy literze, w tych samych proporcjach, i zmierzyliśmy, jak bardzo każde O, e, s, 0 i 8 wypełnia swój prostokąt. Najbliżej był Instrument Sans (Rodrigo Fuenzalida, Jordan Egstad, licencja OFL): okrągłe brzuśce, poziomo cięte końcówki e, c, s, jednopiętrowe g, y z prostym ogonem, okrągłe 6 i 9. Lamina bierze go w szerokości 97 i grubości 430, czyli z tym samym pniem i tą samą szerokością co Diatype, a potem dokłada trzy zasady.</p>
 </section>
 
 <section>
@@ -178,7 +169,7 @@ footer a{color:inherit}
 <section>
   <div class="law">
     <div><span class="n">Zasada 1</span><h3>Proporcje Diatype</h3>
-      <p><strong>Małe litery i cyfry złożone są ciaśniej niż w bazie,</strong> tak żeby alfabet i cyfry miały tę samą długość co w Diatype przy tej samej wysokości wersalików. Zmierzyliśmy to na planszy Diatype: różnica wynosi 1–2 % na każdej linii. Wersaliki zostają jak w bazie, bo tam proporcje już się zgadzały. Po prawej baza bez zmian.</p></div>
+      <p><strong>Szerokość, grubość i odstępy wzięte z Diatype, nie z bazy.</strong> Pień Regular ma tę samą grubość co w Diatype, litery są o 3 % węższe niż w Instrument Sans, a małe litery stoją ciaśniej, żeby alfabet miał tę samą długość co na planszy Diatype przy tej samej wysokości wersalików. Po prawej Instrument Sans bez zmian.</p></div>
     <div></div>
   </div>
   <div class="vs">
@@ -190,12 +181,24 @@ footer a{color:inherit}
 <section>
   <div class="law">
     <div><span class="n">Zasada 2</span><h3>Kropka jak płytka</h3>
-      <p><strong>Każda kropka to mała płytka kamienia z giętymi rogami.</strong> Ta sama krzywa narożnika co w brzuścach, tylko w skali kropki: i, j, ż, ö, kropka, wielokropek, wykrzyknik, pytajnik, dwukropek, punktor, także w kursywie. W bazie kropki są ostrymi kwadratami.</p></div>
+      <p><strong>Każda kropka to mała płytka kamienia z giętymi rogami.</strong> Arkusz kamienia nie ma ostrych krawędzi, więc kropka też nie: i, j, ż, ö, kropka, wielokropek, wykrzyknik, pytajnik, dwukropek, punktor, także w kursywie. W bazie kropki są ostrymi kwadratami.</p></div>
     <div></div>
   </div>
   <div class="vs">
     <div><small>Z zasadą</small><div class="big">żij!?</div><div class="line">Zażółć gęślą jaźń. Tak, tak!</div></div>
     <div><small>Bez zasady</small><div class="big off" style="font-family:NoTile">żij!?</div><div class="line off" style="font-family:NoTile">Zażółć gęślą jaźń. Tak, tak!</div></div>
+  </div>
+</section>
+
+<section>
+  <div class="law">
+    <div><span class="n">Zasada 3</span><h3>Formy, które się gną</h3>
+      <p><strong>Tam, gdzie baza ma dwie formy, Lamina wybiera tę bliższą Diatype i ją dociąga.</strong> R ma nogę wychodzącą z brzuśca i opadającą prawie pionowo. Ogonek Q zaczyna się w środku litery i kończy pod jej prawym bokiem; narysowaliśmy go od nowa według pomiaru z Diatype. Dolar i cent mają kreskę przeprowadzoną przez całą literę. Po prawej formy z bazy.</p></div>
+    <div></div>
+  </div>
+  <div class="vs">
+    <div><small>Z zasadą</small><div class="big">QR$¢</div><div class="line">Quarzite Rosso, Rivestimento</div></div>
+    <div><small>Bez zasady</small><div class="big off" style="font-family:NoForms">QR$¢</div><div class="line off" style="font-family:NoForms">Quarzite Rosso, Rivestimento</div></div>
   </div>
 </section>
 
@@ -262,7 +265,7 @@ footer a{color:inherit}
     <div class="controls">
       <label for="wt">Grubość <input id="wt" type="range" min="400" max="700" value="400" step="1"><output id="wto">400</output></label>
       <label for="sz">Rozmiar <input id="sz" type="range" min="12" max="160" value="64"><output id="szo">64</output></label>
-      <div class="seg"><button id="it" aria-pressed="false">Kursywa</button><button id="tn" aria-pressed="false">Cyfry tabelaryczne</button></div>
+      <div class="seg"><button id="it" aria-pressed="false">Kursywa</button><button id="tn" aria-pressed="false">Cyfry proporcjonalne</button></div>
     </div>
     <div id="sample" contenteditable="true" spellcheck="false" aria-label="Tekst próbny">Zażółć gęślą jaźń. Murèlle 12 480,00 zł</div>
   </div>
@@ -278,7 +281,7 @@ footer a{color:inherit}
   </div>
 </section>
 
-<footer><p>Lamina 3.000. Na bazie <a href="https://github.com/marcologous/hanken-grotesk">Hanken Grotesk</a> (Alfredo Marco Pradil, Hanken Design Co., licencja SIL Open Font License 1.1). Lamina zmienia odstępy małych liter i cyfr (proporcje Diatype), kropki (płytki), lekko prostuje pionowe krzywe, przenosi strzałki „-&gt;” z domyślnych ligatur do opcjonalnych i nadaje nowe nazwy.</p></footer>
+<footer><p>Lamina 4.000. Na bazie <a href="https://github.com/Instrument/instrument-sans">Instrument Sans</a> (Rodrigo Fuenzalida, Jordan Egstad, licencja SIL Open Font License 1.1). Lamina ustawia szerokość i grubość według Diatype, zagęszcza małe litery, zamienia kropki na płytki, rysuje nowy ogonek Q, wybiera formy R, $ i ¢, ustawia cyfry tabelaryczne jako domyślne, przenosi strzałki „-&gt;” i „www” z domyślnych ligatur do opcjonalnych i nadaje nowe nazwy.</p></footer>
 </main>
 
 <script>
@@ -289,7 +292,7 @@ footer a{color:inherit}
     var max=Math.max(12,(s.clientWidth-36)/3.2);
     s.style.fontSize=Math.min(+sz.value,max)+'px';so.textContent=sz.value;
     s.style.fontWeight=wt.value;wto.textContent=wt.value;
-    s.style.fontStyle=ital?'italic':'normal';s.style.fontVariantNumeric=tab?'tabular-nums':'normal';
+    s.style.fontStyle=ital?'italic':'normal';s.style.fontVariantNumeric=tab?'proportional-nums':'normal';
   }
   it.addEventListener('click',function(){ital=!ital;it.setAttribute('aria-pressed',String(ital));apply();});
   tn.addEventListener('click',function(){tab=!tab;tn.setAttribute('aria-pressed',String(tab));apply();});
@@ -299,13 +302,25 @@ footer a{color:inherit}
 '''
 
 
+def nbsp(page):
+    """Amounts never break: 12 480,00 zł, 1200 × 600 mm (only inside <main>)."""
+    import re
+    a, b = page.index("<main>"), page.index("</main>")
+    body = page[a:b]
+    body = re.sub(r"(\d) (?=\d{3}\b)", "\\1\u00a0", body)
+    body = re.sub(r"(\d) (?=(zł|mm|szt|m²|×))", "\\1\u00a0", body)
+    body = re.sub(r"× (?=\d)", "×\u00a0", body)
+    return page[:a] + body + page[b:]
+
+
 def main():
     web = ROOT / "fonts" / "web"
     ctl = ROOT / "build" / "control"
-    html = (PAGE.replace("__VF__", b64(web / "Lamina[wght].woff2"))
+    html = (nbsp(PAGE).replace("__VF__", b64(web / "Lamina[wght].woff2"))
             .replace("__VFI__", b64(web / "Lamina-Italic[wght].woff2"))
             .replace("__NT__", b64(ctl / "notile.woff2"))
-            .replace("__UP__", b64(ctl / "hanken.woff2"))
+            .replace("__UP__", b64(ctl / "upstream.woff2"))
+            .replace("__NF__", b64(ctl / "noforms.woff2"))
             .replace("__COUNT__", str(glyph_count())))
     out = ROOT / "specimen.html"
     out.write_text(html)

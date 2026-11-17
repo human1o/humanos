@@ -1,4 +1,4 @@
-"""Lamina 2 — the edits applied to both masters.
+"""Lamina 4 — the edits applied to both masters.
 
 Every edit is a rule, applied the same way to every glyph and to both
 masters, so the two masters stay point-compatible and the weights in between
@@ -8,69 +8,117 @@ import math
 
 from ufoLib2.objects import Point
 
-# --- the flank -----------------------------------------------------------------
-# Where a curve becomes vertical, its handles are lengthened (measured as a
-# fraction of the leg to the corner where the two tangents meet). Bowls then
-# stand on straighter sides: a sheet of stone wrapped around a column.
-FLANK_VERTICAL = 1.14     # handle at the vertical end of a quarter curve
-FLANK_HORIZONTAL = 1.03   # handle at the horizontal end
-FLANK_MAX = 0.88          # never longer than this share of the leg
+# --- the forms ---------------------------------------------------------------------
+# Instrument Sans ships alternates; two of them are closer to the idea and to
+# Diatype, so they become the default: the R whose leg leaves the bowl and
+# drops almost straight (ss05), and $ ¢ with the stroke drawn through (ss12).
+# The names are swapped everywhere (outlines, components, kerning groups,
+# features), so every accented R follows and kerning stays with its shape.
+FORMS = ("ss05", "ss09", "ss12")
+DROP_FEATURES = ("ss01", "ss05", "ss09", "ss12")   # ss01 = round dots, against the tile
+
+# Q: Instrument's alternate tail (ss09) crosses the bowl but runs long and
+# steep. Lamina's tail is the one measured on Diatype: it starts inside the
+# counter, at 59 % of the bowl's width and 30 % of the cap height, and ends
+# under the bowl's right flank, just below the baseline.
+Q_START = (0.59, 0.30)
+Q_END = (0.875, -0.05)
 
 
-def _quarter_segments(contour):
-    """Yield (i0, i1, i2, i3) point indices of every cubic segment."""
-    pts = contour.points
-    n = len(pts)
-    on = [i for i, p in enumerate(pts) if p.type is not None]
-    for k, i3 in enumerate(on):
-        if pts[i3].type != "curve":
-            continue
-        i0 = on[k - 1]
-        i1, i2 = (i0 + 1) % n, (i0 + 2) % n
-        if (i2 + 1) % n != i3 or pts[i1].type is not None or pts[i2].type is not None:
-            continue
-        yield i0, i1, i2, i3
-
-
-def flank(glyph, without):
-    if "flank" in without:
+def q_tail(font, without):
+    if "forms" in without or "Q.ss09" not in font:
         return 0
-    changed = 0
-    for c in glyph.contours:
-        pts = c.points
-        for i0, i1, i2, i3 in _quarter_segments(c):
-            p0, p1, p2, p3 = pts[i0], pts[i1], pts[i2], pts[i3]
-            v0 = abs(p1.x - p0.x) < 0.75 and abs(p1.y - p0.y) > 1     # vertical at p0
-            h0 = abs(p1.y - p0.y) < 0.75 and abs(p1.x - p0.x) > 1     # horizontal at p0
-            v3 = abs(p2.x - p3.x) < 0.75 and abs(p2.y - p3.y) > 1
-            h3 = abs(p2.y - p3.y) < 0.75 and abs(p2.x - p3.x) > 1
-            if v0 and h3:
-                corner = (p0.x, p3.y)
-                _stretch(p0, p1, corner, FLANK_VERTICAL)
-                _stretch(p3, p2, corner, FLANK_HORIZONTAL)
-                changed += 1
-            elif h0 and v3:
-                corner = (p3.x, p0.y)
-                _stretch(p0, p1, corner, FLANK_HORIZONTAL)
-                _stretch(p3, p2, corner, FLANK_VERTICAL)
-                changed += 1
-    return changed
+    g = font["Q.ss09"]
+    sh = _shear(font)
+    tails = [c for c in g.contours if len(c.points) == 4 and all(p.type == "line" for p in c.points)]
+    bowls = [c for c in g.contours if c not in tails]
+    if len(tails) != 1 or not bowls:
+        return 0
+    xs = [p.x - p.y * sh for c in bowls for p in c.points]
+    x0, x1 = min(xs), max(xs)
+    cap = font.info.capHeight
+    pts = tails[0].points
+    tw = math.hypot(pts[2].x - pts[1].x, pts[2].y - pts[1].y)
+    S = (x0 + Q_START[0] * (x1 - x0), Q_START[1] * cap)
+    E = (x0 + Q_END[0] * (x1 - x0), Q_END[1] * cap)
+    L = math.hypot(E[0] - S[0], E[1] - S[1])
+    d = ((E[0] - S[0]) / L, (E[1] - S[1]) / L)
+    n = (-d[1], d[0]) if d[0] * 0 - d[1] > 0 else (d[1], -d[0])
+    if n[0] < 0:
+        n = (-n[0], -n[1])
+    h = tw / 2
+    new = [(S[0] - n[0] * h, S[1] - n[1] * h), (E[0] - n[0] * h, E[1] - n[1] * h),
+           (E[0] + n[0] * h, E[1] + n[1] * h), (S[0] + n[0] * h, S[1] + n[1] * h)]
+    for p, (x, y) in zip(pts, new):
+        p.x, p.y = x + y * sh, y
+    return 1
 
 
-def _stretch(on, off, corner, factor):
-    leg = math.hypot(corner[0] - on.x, corner[1] - on.y)
-    if leg < 1:
-        return
-    cur = math.hypot(off.x - on.x, off.y - on.y)
-    frac = cur / leg
-    new = min(frac * factor, max(frac, FLANK_MAX))
-    s = new / frac if frac else 1
-    off.x = on.x + (off.x - on.x) * s
-    off.y = on.y + (off.y - on.y) * s
+DIGITS = ("zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine")
+
+
+def _swap_pairs(font):
+    # figures: the tabular drawing becomes the default, so prices and tables
+    # line up with no CSS; proportional figures stay behind pnum
+    pairs = [(d, d + ".tf") for d in DIGITS if d in font and d + ".tf" in font]
+    for name in font.keys():
+        parts = name.split(".")
+        for ss in FORMS:
+            if ss in parts[1:]:
+                base = ".".join(p for p in parts if p != ss)
+                if base in font:
+                    pairs.append((base, name))
+    return pairs
+
+
+def forms(font, without):
+    import re
+    if "forms" in without:
+        return 0
+    pairs = _swap_pairs(font)
+    m = {}
+    for a, b in pairs:
+        m[a], m[b] = b, a
+    # outlines: each glyph keeps its unicodes, takes its partner's drawing
+    snap = {}
+    for a, b in pairs:
+        for n in (a, b):
+            g = font[n]
+            snap[n] = ([c for c in g.contours], [c for c in g.components],
+                       [x for x in g.anchors], g.width)
+    for a, b in pairs:
+        for n, o in ((a, b), (b, a)):
+            g = font[n]
+            cs, comps, anch, w = snap[o]
+            g.clearContours(); g.clearComponents(); g.clearAnchors()
+            for c in cs: g.contours.append(c)
+            for c in comps: g.components.append(c)
+            for x in anch: g.anchors.append(x)
+            g.width = w
+    for g in font:
+        for c in g.components:
+            if c.baseGlyph in m:
+                c.baseGlyph = m[c.baseGlyph]
+    for k, v in list(font.groups.items()):
+        font.groups[k] = [m.get(n, n) for n in v]
+    for (l, r), v in list(font.kerning.items()):
+        nl, nr = m.get(l, l), m.get(r, r)
+        if (nl, nr) != (l, r):
+            del font.kerning[(l, r)]
+            font.kerning[(nl, nr)] = v
+    t = font.features.text
+    for ss in DROP_FEATURES:
+        t = re.sub(r"feature %s \{.*?\} %s;\n?" % (ss, ss), "", t, flags=re.S)
+        t = re.sub(r"^\s*feature %s;\n" % ss, "", t, flags=re.M)
+    if m:
+        pat = re.compile(r"(?<![\w.@])(%s)(?![\w.])" % "|".join(re.escape(n) for n in sorted(m, key=len, reverse=True)))
+        t = pat.sub(lambda x: m[x.group(1)], t)
+    font.features.text = t
+    return len(pairs)
 
 
 # --- the tile ----------------------------------------------------------------------
-# Upstream dots are sharp squares. Lamina's dot is a small tile of stone with
+# Instrument's dots are sharp squares. Lamina's dot is a small tile of stone with
 # bent corners: the same corner law as the bowls, at the scale of a dot.
 TILE_K = 0.70
 
@@ -165,10 +213,10 @@ def rename(font, style, italic):
     i.styleMapFamilyName = FAMILY
     i.styleMapStyleName = {"Regular": "regular", "Bold": "bold", "Italic": "italic", "Bold Italic": "bold italic"}.get(sty, "regular")
     i.versionMajor, i.versionMinor = VERSION
-    i.copyright = ("Copyright 2026 The Lamina Project Authors. Based on Hanken Grotesk, "
-                   "Copyright 2021 The Hanken Grotesk Project Authors (https://github.com/marcologous/hanken-grotesk)")
+    i.copyright = ("Copyright 2026 The Lamina Project Authors. Based on Instrument Sans, "
+                   "Copyright 2022 The Instrument Sans Project Authors (https://github.com/Instrument/instrument-sans)")
     i.trademark = None
-    i.openTypeNameDesigner = "Lamina: Murèlle & Lamelio. Hanken Grotesk: Alfredo Marco Pradil, Hanken Design Co."
+    i.openTypeNameDesigner = "Lamina: Murèlle & Lamelio. Instrument Sans: Rodrigo Fuenzalida, Jordan Egstad"
     i.openTypeNameDesignerURL = None
     i.openTypeNameManufacturer = "Lamina Project"
     i.openTypeNameManufacturerURL = None
@@ -190,11 +238,12 @@ def rename(font, style, italic):
 
 
 def features(font):
-    """Text ligatures only. Upstream turns '->' and '<-' into arrows by
-    default, which rewrites what partners type into forms; those move to the
-    optional dlig feature."""
+    """Text ligatures only. Upstream turns '->', '<-' and 'www' into single
+    glyphs by default, which rewrites what partners type into forms and
+    addresses; those move to the optional dlig feature."""
     t = font.features.text
-    for pair in ("sub hyphen greater by hyphen_greater.liga;\n", "sub less hyphen by less_hyphen.liga;\n"):
+    for pair in ("sub hyphen greater by hyphen_greater.liga;\n", "sub less hyphen by less_hyphen.liga;\n",
+                 "sub w w w by w_w_w.liga;\n"):
         if pair in t:
             t = t.replace(pair, "")
             t += "\nfeature dlig {\n" + pair + "} dlig;\n"
@@ -202,9 +251,10 @@ def features(font):
 
 
 # --- spacing ---------------------------------------------------------------------------
-# Lowercase and figures are set a little closer, measured against ABC Diatype:
-# its lowercase alphabet runs 4.7 % shorter for the same cap height.
-TIGHTEN = {"lower": 12, "figure": 14}
+# Lowercase is set a little closer, measured against ABC Diatype: at width 97
+# its lowercase alphabet runs about 4 % shorter for the same cap height.
+# Figures already match and stay as drawn.
+TIGHTEN = {"lower": 9, "figure": 0}
 
 
 def _category(name, font):
@@ -258,6 +308,8 @@ def tighten(font, without):
         if g.width <= 0:
             continue
         d = TIGHTEN[cats[name]]
+        if not d:
+            continue
         g.move((-d, 0))
         for a in g.anchors:
             a.x += 0          # anchors move with g.move
@@ -268,10 +320,10 @@ def tighten(font, without):
 
 def apply(font, style, italic=False, without=(), dots=None):
     features(font)
-    stats = {"flank": 0, "tile": 0}
+    q_tail(font, without)
+    stats = {"forms": forms(font, without), "tile": 0}
     sh = _shear(font)
     for g in font:
-        stats["flank"] += flank(g, without)
         stats["tile"] += tile(g, without, dots, sh)
     stats["tight"] = tighten(font, without)
     rename(font, style, italic)
