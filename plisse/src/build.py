@@ -12,7 +12,7 @@ Pipeline
   3. Plissé edits on both masters (identical, so they stay compatible):
        forms  — the open R and the full-stroke $ ¢ become the default
        tile   — every dot becomes a small stone tile with bent corners
-       space  — lowercase set a little closer
+       space  — lowercase set a little closer; no pair may touch (guard)
        liga   — arrow and www ligatures moved from liga to dlig
        names  — new family name, upstream attribution kept
   4. variable font (wght 400–700), static 400/500/600/700, hinted, WOFF2
@@ -91,9 +91,14 @@ def masters(italic=False):
     srcs = base_masters(italic)
     # a dot is tiled only where it is a dot in both masters, so they stay compatible
     dots = set.intersection(*(edits.dot_candidates(ufoLib2.Font.open(p)) for p in srcs))
+    fonts = {}
     for src, style in zip(srcs, ("Regular", "Bold")):
         font = ufoLib2.Font.open(src)
         edits.apply(font, style, italic=italic, without=WITHOUT, dots=dots)
+        fonts[style] = font
+    if "space" not in WITHOUT:
+        edits.guard(list(fonts.values()))
+    for style, font in fonts.items():
         dst = out / f"{FILE}-{style}.ufo"
         font.save(dst, overwrite=True)
         paths[style] = dst

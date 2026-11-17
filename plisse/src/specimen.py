@@ -153,11 +153,11 @@ code{font-family:inherit;font-feature-settings:"zero";background:var(--wall);bor
 .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
 .kpis div{border:1px solid var(--rule);border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:4px}
 .kpis span{font-size:12px;color:var(--muted)}
-.kpis b{font-size:22px;font-weight:600;letter-spacing:-.01em}
+.kpis b{font-size:22px;font-weight:600;letter-spacing:-.01em;font-variant-numeric:tabular-nums}
 .orders{width:100%;border-collapse:collapse;font-size:13px}
 .orders th{font-size:12px;font-weight:500;color:var(--muted);text-align:left;padding:8px 8px 8px 0;border-bottom:1px solid var(--rule)}
 .orders td{padding:10px 8px 10px 0;border-bottom:1px solid var(--rule)}
-.orders td:last-child,.orders th:last-child{text-align:right;padding-right:0}
+.orders td:last-child,.orders th:last-child{text-align:right;padding-right:0;font-variant-numeric:tabular-nums}
 .orders .code{font-feature-settings:"zero";font-weight:500}
 .st{display:inline-block;font-size:12px;border-radius:999px;padding:2px 9px;background:var(--wall);border:1px solid var(--rule);white-space:nowrap}
 .st.ok{background:var(--dark);color:var(--on-dark);border-color:var(--dark)}
@@ -188,7 +188,7 @@ footer a{color:inherit}
   <p class="lede">Plisa to cienki materiał złożony w pionowe fałdy tej samej szerokości. Murèlle to arkusz kamienia, który owija słup. Lamelio to ściana z lamel w równych odstępach. Plissé łączy jedno z drugim i nie dodaje niczego więcej.</p>
   <div class="pillars">
     <div><span class="n">Gięcie</span><b>Okrągłe jak kamień, który się gnie</b><p>O, e, s i 0 wypełniają swój prostokąt tak samo jak w Diatype. Nic nie jest ostre ani odlane, końcówki są cięte poziomo i spokojnie.</p></div>
-    <div><span class="n">Rytm</span><b>Równe jak lamele</b><p>Pionowe kreski stoją w równych odstępach. Cyfry mają jedną szerokość, więc ceny w kolumnie stoją jedna pod drugą.</p></div>
+    <div><span class="n">Rytm</span><b>Równe jak lamele</b><p>Pionowe kreski stoją w równych odstępach. W tekście każda cyfra ma swoją szerokość, a w tabeli wszystkie jedną, więc ceny stoją jedna pod drugą.</p></div>
     <div><span class="n">Płytka</span><b>Jeden detal, który się pamięta</b><p>Każda kropka to mała płytka kamienia z giętymi rogami: w i, ż, w kropce, w dwukropku, a na życzenie także w środku zera.</p></div>
   </div>
 </section>
@@ -234,12 +234,12 @@ footer a{color:inherit}
 <section>
   <div class="law">
     <div><span class="n">Zasada 3</span><h3>Formy, które się gną</h3>
-      <p><strong>Tam, gdzie baza ma dwie formy, Plissé wybiera tę bliższą Diatype i ją dociąga.</strong> R ma nogę wychodzącą z brzuśca i opadającą prawie pionowo. Ogonek Q zaczyna się w środku litery i kończy pod jej prawym bokiem; narysowaliśmy go od nowa według pomiaru z Diatype. Dolar i cent mają kreskę przeprowadzoną przez całą literę. Jedynka nigdy nie ma stopki, także w kolumnie cen. Po prawej formy z bazy.</p></div>
+      <p><strong>Tam, gdzie baza ma dwie formy, Plissé wybiera tę bliższą Diatype i ją dociąga.</strong> R ma nogę wychodzącą z brzuśca i opadającą prawie pionowo. Ogonek Q zaczyna się w środku litery i kończy pod jej prawym bokiem; narysowaliśmy go od nowa według pomiaru z Diatype. Dolar i cent mają kreskę przeprowadzoną przez całą literę. Jedynka nigdy nie ma stopki, także w kolumnie cen, gdzie stoi na osi zera. Po prawej formy z bazy.</p></div>
     <div></div>
   </div>
   <div class="vs">
-    <div><small>Z zasadą</small><div class="big">QR$1</div><div class="line">Quarzite Rosso, 1 111,10 zł</div></div>
-    <div><small>Bez zasady</small><div class="big off" style="font-family:NoForms;font-variant-numeric:tabular-nums">QR$1</div><div class="line off" style="font-family:NoForms;font-variant-numeric:tabular-nums">Quarzite Rosso, 1 111,10 zł</div></div>
+    <div><small>Z zasadą</small><div class="big">QR$1</div><div class="line" style="font-variant-numeric:tabular-nums">Quarzite Rosso, 1 111,10 zł</div></div>
+    <div><small>Bez zasady</small><div class="big off" style="font-family:NoForms">QR$1</div><div class="line off" style="font-family:NoForms;font-variant-numeric:tabular-nums">Quarzite Rosso, 1 111,10 zł</div></div>
   </div>
 </section>
 
@@ -268,10 +268,10 @@ footer a{color:inherit}
 
 <section>
   <div class="head"><span class="label">Cyfry</span><h2>Cyfry jak litery najwyższej wagi</h2>
-  <p class="lede">Cyfry mają jeden rysunek. Domyślnie są tabelaryczne, więc ceny w kolumnie stoją jedna pod drugą bez żadnego CSS; w tekście ciągłym można przełączyć je na proporcjonalne.</p></div>
+  <p class="lede">Cyfry mają jeden rysunek. W tekście i w nagłówkach są proporcjonalne, jak w Diatype, więc jedynka nigdy nie stoi w dziurze. W tabelach i cennikach włącza się cyfry tabelaryczne (<code>font-variant-numeric: tabular-nums</code>): ta sama jedynka bez stopki, wyśrodkowana w kolumnie.</p></div>
   <div class="figs">
-    <div><span class="label">Domyślne, tabelaryczne</span><div class="col">12 480,00 zł<br>9 315,60 zł<br>1 111,10 zł<br>407,90 zł</div></div>
-    <div><span class="label">Proporcjonalne</span><div class="prop">12 480,00 zł<br>9 315,60 zł<br>1 111,10 zł<br>407,90 zł</div></div>
+    <div><span class="label">Tabelaryczne, w cenniku</span><div class="col">12 480,00 zł<br>9 315,60 zł<br>1 111,10 zł<br>407,90 zł</div></div>
+    <div><span class="label">Domyślne, w tekście</span><div class="prop">12 480,00 zł<br>9 315,60 zł<br>1 111,10 zł<br>407,90 zł</div></div>
     <div><span class="label">Jeden rysunek</span><div class="giant">2026</div></div>
   </div>
 </section>
@@ -286,7 +286,7 @@ footer a{color:inherit}
 </section>
 
 <section>
-  <div class="head"><span class="label">Interfejs</span><h2>Plissé w panelu partnera</h2><p class="lede">Przykładowe dane. Tekst ma 13–14 px, etykiety 12 px, numery zamówień mają zero z płytką.</p></div>
+  <div class="head"><span class="label">Interfejs</span><h2>Plissé w panelu partnera</h2><p class="lede">Przykładowe dane. Tekst ma 13–14 px, etykiety 12 px, kwoty mają cyfry tabelaryczne, numery zamówień zero z płytką.</p></div>
   <div class="app">
     <nav><b>Murèlle</b><span class="on">Zamówienia</span><span>Produkty</span><span>Konfigurator ściany</span><span>Faktury</span><span>Ustawienia</span></nav>
     <div class="appmain">
@@ -336,7 +336,7 @@ footer a{color:inherit}
     <div class="controls">
       <label for="wt">Grubość <input id="wt" type="range" min="400" max="700" value="400" step="1"><output id="wto">400</output></label>
       <label for="sz">Rozmiar <input id="sz" type="range" min="12" max="160" value="64"><output id="szo">64</output></label>
-      <div class="seg"><button id="it" aria-pressed="false">Kursywa</button><button id="tn" aria-pressed="false">Cyfry proporcjonalne</button></div>
+      <div class="seg"><button id="it" aria-pressed="false">Kursywa</button><button id="tn" aria-pressed="false">Cyfry tabelaryczne</button></div>
     </div>
     <div id="sample" contenteditable="true" spellcheck="false" aria-label="Tekst próbny">Zażółć gęślą jaźń. Plissé 12 480,00 zł</div>
   </div>
@@ -352,7 +352,7 @@ footer a{color:inherit}
   </div>
 </section>
 
-<footer><p>Plissé 1.000, krój pisma Murèlle i Lamelio. Na bazie <a href="https://github.com/Instrument/instrument-sans">Instrument Sans</a> (Rodrigo Fuenzalida, Jordan Egstad, licencja SIL Open Font License 1.1). Plissé ustawia szerokość i grubość według Diatype, zagęszcza małe litery, zamienia kropki na płytki, dodaje zero z płytką, rysuje nowy ogonek Q i polską kreskę, wybiera formy R, $ i ¢, zdejmuje stopkę z jedynki, ustawia cyfry tabelaryczne jako domyślne, przenosi strzałki „-&gt;” i „www” z domyślnych ligatur do opcjonalnych i nadaje nowe nazwy.</p></footer>
+<footer><p>Plissé 1.000, krój pisma Murèlle i Lamelio. Na bazie <a href="https://github.com/Instrument/instrument-sans">Instrument Sans</a> (Rodrigo Fuenzalida, Jordan Egstad, licencja SIL Open Font License 1.1). Plissé ustawia szerokość i grubość według Diatype, zagęszcza małe litery, zamienia kropki na płytki, dodaje zero z płytką, rysuje nowy ogonek Q i polską kreskę, wybiera formy R, $ i ¢, zdejmuje stopkę z jedynki tabelarycznej i stawia ją na osi zera, pilnuje, żeby żadna para liter się nie stykała, przenosi strzałki „-&gt;” i „www” z domyślnych ligatur do opcjonalnych i nadaje nowe nazwy.</p></footer>
 </main>
 
 <script>
@@ -363,7 +363,7 @@ footer a{color:inherit}
     var max=Math.max(12,(s.clientWidth-36)/3.2);
     s.style.fontSize=Math.min(+sz.value,max)+'px';so.textContent=sz.value;
     s.style.fontWeight=wt.value;wto.textContent=wt.value;
-    s.style.fontStyle=ital?'italic':'normal';s.style.fontVariantNumeric=tab?'proportional-nums':'normal';
+    s.style.fontStyle=ital?'italic':'normal';s.style.fontVariantNumeric=tab?'tabular-nums':'normal';
   }
   it.addEventListener('click',function(){ital=!ital;it.setAttribute('aria-pressed',String(ital));apply();});
   tn.addEventListener('click',function(){tab=!tab;tn.setAttribute('aria-pressed',String(tab));apply();});

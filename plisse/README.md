@@ -24,7 +24,10 @@ masters and to the italic):
 1. **Diatype proportions.** Plissé's masters are Instrument Sans at width 97
    and weight 430 (Regular) and 700 (Bold): the stem and set width of
    Diatype. Lowercase is set 9 units per side closer, so the lowercase
-   alphabet runs the same length as on the Diatype sheet.
+   alphabet runs the same length as on the Diatype sheet. A guard measures
+   every pair of the alphabet, figures and punctuation before and after: no
+   pair the spacing tightened may fall under 25 units (it gets its old gap
+   back), and no pair may come closer than 8, not even where upstream had it.
 2. **Tiles.** Every dot (i j ż ö . … ! ? : • ÷) is a small stone tile with
    bent corners instead of a sharp square. Upstream's round-dot set (ss01)
    is removed: it argues against the tile. The optional `zero` feature sets
@@ -34,11 +37,12 @@ masters and to the italic):
    Q gets a new tail, measured on Diatype: it starts inside the counter (59 %
    of the bowl's width, 30 % of the cap height) and ends under the right
    flank just below the baseline. The 1 never stands on a foot, not even in
-   the tabular figures.
+   the tabular figures, where it sits on the axis of the tabular 0.
 4. **Polish kreska.** The acute stands at 62° instead of 50°, compact, with
    the same stroke weight; the grave of è mirrors it.
-5. **Tabular figures by default.** Prices and tables line up with no CSS;
-   `pnum` gives proportional figures.
+5. **Figures.** Proportional by default, as in Diatype, so a 1 never stands
+   in a hole in text and headlines; tables and prices use `tnum`
+   (`font-variant-numeric: tabular-nums`).
 6. **No surprise ligatures.** `->`, `<-` and `www` move from `liga` to the
    optional `dlig`, so what people type in forms stays what they typed.
 7. **Names.** New family name, attribution kept as the licence requires.
@@ -47,7 +51,7 @@ masters and to the italic):
 | --- | --- |
 | Weights | 400–700 variable; static Regular, Medium, SemiBold, Bold |
 | Styles | upright and italic |
-| Figures | tabular by default (`pnum` for proportional) |
+| Figures | proportional by default, `tnum` for tables and prices |
 | Characters | 343 (Latin incl. full Polish and è) |
 | Files | `fonts/web` (WOFF2 + `plisse.css`), `fonts/ttf` (hinted), `fonts/variable` |
 | Licence | SIL Open Font License 1.1 — see `OFL.txt` |

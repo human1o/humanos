@@ -54,13 +54,11 @@ def q_tail(font, without):
     return 1
 
 
-DIGITS = ("zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine")
-
-
 def _swap_pairs(font):
-    # figures: the tabular drawing becomes the default, so prices and tables
-    # line up with no CSS; proportional figures stay behind pnum
-    pairs = [(d, d + ".tf") for d in DIGITS if d in font and d + ".tf" in font]
+    # Figures stay proportional by default, as in Diatype: in running text and
+    # headlines every figure keeps its own width, so a 1 never stands in a
+    # hole. Tables and prices switch to tabular figures with tnum.
+    pairs = []
     for name in font.keys():
         parts = name.split(".")
         for ss in FORMS:
@@ -204,16 +202,32 @@ def tile(glyph, without, allowed=None, shear=0.0):
 
 # --- the one ---------------------------------------------------------------------
 # Upstream's tabular 1 stands on a foot; Diatype's 1 never does. Plissé's
-# default (tabular) 1 is the proportional drawing, centred in the tabular
-# width: one figure, one drawing, in every column.
+# tabular 1 (tnum) is the proportional drawing, its ink centred on the
+# axis of the tabular 0: one figure, one drawing, in every column.
 def footless_one(font, without):
     if "forms" in without or "one" not in font or "one.tf" not in font:
         return 0
-    g, src = font["one"], font["one.tf"]
-    if len(g.contours) == len(src.contours) and not src.components:
-        pass
+    from fontTools.pens.basePen import BasePen
     from fontTools.pens.transformPen import TransformPointPen
-    shift = (g.width - src.width) / 2
+    sh = _shear(font)
+
+    def ink(name):
+        """Leftmost and rightmost ink, measured upright (italic unsheared)."""
+        xs = []
+
+        class P(BasePen):
+            def _moveTo(s, p): xs.append(p[0] - p[1] * sh)
+            def _lineTo(s, p): xs.append(p[0] - p[1] * sh)
+            def _curveToOne(s, a, b, c): xs.extend(q[0] - q[1] * sh for q in (a, b, c))
+            def _qCurveToOne(s, a, b): xs.extend(q[0] - q[1] * sh for q in (a, b))
+        font[name].draw(P(font))
+        return min(xs), max(xs)
+    src, g = font["one"], font["one.tf"]
+    x0, x1 = ink("one")
+    # the 1 sits on the same axis as the tabular 0 (the middle of the cell
+    # upright; the italic figures' own axis in the italic)
+    z0, z1 = ink("zero.tf") if "zero.tf" in font else (0, g.width)
+    shift = (z0 + z1) / 2 - (x0 + x1) / 2
     g.clearContours()
     g.clearComponents()
     src.drawPoints(TransformPointPen(g.getPointPen(), (1, 0, 0, 1, shift, 0)))
@@ -307,6 +321,110 @@ def tile_zero(font, without):
         rules = "".join(f"  sub {a} by {b};\n" for a, b in made)
         font.features.text += "\nfeature zero {\n" + rules + "} zero;\n"
     return len(made)
+
+
+# --- the guard -------------------------------------------------------------------
+# Setting the lowercase closer must never make two letters touch. Every pair
+# of the Polish and Latin alphabet, figures and punctuation is measured
+# (outlines and kerning) before and after; a pair the spacing pushed under
+# GUARD_GAP gets its old gap back (at most GUARD_GAP), and no pair may come
+# closer than GUARD_MIN, not even where upstream had it so. The same pairs are written to both masters, each
+# with its own value, so the weights in between interpolate cleanly.
+GUARD_GAP = 25
+GUARD_MIN = 8
+GUARD_CHARS = ("abcdefghijklmnopqrstuvwxyząćęłńóśźżèéàüöä"
+               "ABCDEFGHIJKLMNOPQRSTUVWXYZĄĆĘŁŃÓŚŹŻ0123456789.,:;!?()-'\"/&€%")
+_STEP = 4
+
+
+def _profile(font, name, sh):
+    from fontTools.pens.basePen import BasePen
+    segs = []
+
+    class Flat(BasePen):
+        def _moveTo(s, p): s.c = s.s = p
+        def _lineTo(s, p): segs.append((s.c, p)); s.c = p
+        def _curveToOne(s, a, b, c):
+            p0 = s.c
+            for i in range(1, 9):
+                u = i / 8; m = 1 - u
+                s._lineTo((m**3*p0[0]+3*m*m*u*a[0]+3*m*u*u*b[0]+u**3*c[0], m**3*p0[1]+3*m*m*u*a[1]+3*m*u*u*b[1]+u**3*c[1]))
+        def _qCurveToOne(s, a, b):
+            p0 = s.c
+            for i in range(1, 7):
+                u = i / 6; m = 1 - u
+                s._lineTo((m*m*p0[0]+2*m*u*a[0]+u*u*b[0], m*m*p0[1]+2*m*u*a[1]+u*u*b[1]))
+        def _closePath(s):
+            if s.c != s.s: segs.append((s.c, s.s))
+    font[name].draw(Flat(font))
+    prof = {}
+    for (x0, y0), (x1, y1) in segs:
+        if y0 == y1:
+            continue
+        lo, hi = sorted((y0, y1))
+        for yb in range(math.ceil(lo / _STEP), math.floor(hi / _STEP) + 1):
+            y = yb * _STEP
+            if lo <= y < hi:
+                x = x0 + (y - y0) * (x1 - x0) / (y1 - y0) - y * sh
+                a, b = prof.get(yb, (1e9, -1e9))
+                prof[yb] = (min(a, x), max(b, x))
+    return prof
+
+
+def _kern_value(font, l, r, g1, g2):
+    k = font.kerning
+    L, R = g1.get(l), g2.get(r)
+    for pair in ((l, r), (l, R), (L, r), (L, R)):
+        if None not in pair and pair in k:
+            return k[pair]
+    return 0
+
+
+def pair_gaps(font):
+    """{(left, right): narrowest horizontal gap, in units, kerning included}."""
+    cmap = {u: g.name for g in font for u in g.unicodes}
+    names = [cmap[ord(c)] for c in GUARD_CHARS if ord(c) in cmap]
+    g1 = {n: grp for grp, ms in font.groups.items() if grp.startswith("public.kern1.") for n in ms}
+    g2 = {n: grp for grp, ms in font.groups.items() if grp.startswith("public.kern2.") for n in ms}
+    sh = _shear(font)
+    prof = {n: _profile(font, n, sh) for n in names}
+    out = {}
+    for l in names:
+        for r in names:
+            kv = _kern_value(font, l, r, g1, g2)
+            pl, pr = prof[l], prof[r]
+            out[(l, r)] = (min((font[l].width + kv + pr[y][0] - pl[y][1] for y in set(pl) & set(pr)), default=1e9), kv)
+    return out
+
+
+PRE = {}   # id(font) -> pair gaps measured before the spacing edit
+
+
+def guard_needs(font):
+    """{(left, right): kerning that gives the pair back the gap it had before
+    the lowercase was set closer (at most GUARD_GAP), and opens any pair that
+    touches, upstream included, to GUARD_MIN."""
+    pre = PRE.get(id(font), {})
+    out = {}
+    for pair, (gap, kv) in pair_gaps(font).items():
+        before = pre.get(pair, (gap, kv))[0]
+        target = min(GUARD_GAP, max(before, GUARD_MIN))
+        if gap < target - 0.5:
+            out[pair] = round(kv + target - gap)
+    return out
+
+
+def guard(fonts):
+    """Open every too-tight pair in all masters; returns the pairs."""
+    needs = [guard_needs(f) for f in fonts]
+    pairs = set().union(*needs)
+    for f, need in zip(fonts, needs):
+        g1 = {n: grp for grp, ms in f.groups.items() if grp.startswith("public.kern1.") for n in ms}
+        g2 = {n: grp for grp, ms in f.groups.items() if grp.startswith("public.kern2.") for n in ms}
+        for l, r in pairs:
+            f.kerning[(l, r)] = need.get((l, r), _kern_value(f, l, r, g1, g2))
+        f.lib["plisse.stats"]["guard"] = len(pairs)
+    return pairs
 
 
 # --- names -----------------------------------------------------------------------
@@ -435,6 +553,8 @@ def apply(font, style, italic=False, without=(), dots=None):
     for g in font:
         stats["tile"] += tile(g, without, dots, sh)
     stats["zero"] = tile_zero(font, without)
+    if "space" not in without:
+        PRE[id(font)] = pair_gaps(font)
     stats["tight"] = tighten(font, without)
     rename(font, style, italic)
     font.lib["plisse.stats"] = stats
