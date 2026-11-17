@@ -1,29 +1,35 @@
 # Lamina
 
-The typeface of Murèlle and Lamelio. *Lamina* is Latin for a thin plate; *lamella*
-is its diminutive. Both brands grow out of that word, and so does the typeface.
+The typeface of Murèlle and Lamelio: a slender grotesk on the rhythm of the
+lamella. Built on [Zalando Sans](https://github.com/zalando/sans) (Jakob
+Ekelund, KH Type, Zalando; SIL OFL 1.1), released in 2025.
 
-**The idea.** Every letter stands on the rhythm of the lamella. Where a stroke
-turns, it bends like stone; where it ends, it is cut like a slab.
+**Why this base.** Zalando Sans already has what we like in ABC Diatype:
+spurless stems in a, u, d, q, a spurless G, a J without a top bar, flat
+horizontal terminals and careful Polish diacritics. It also has width and
+weight axes and a true italic.
 
-1. **Lamella rhythm.** Round letters have straight flanks. The bowls of o, d, b,
-   p, q, c and e stand on vertical sides, with the same light between them as in
-   n, u and h, so text pulses evenly like a wall of lamellae.
-2. **Bend, don't break.** Every stroke that turns follows one curve law: the
-   foot of t, the hook of f, the tails of j, y and g, the flag of 1, the ogonek.
-3. **Square cuts.** Every terminal is cut horizontally or vertically, like a sawn
-   slab: c, e, a, s, C, G, the apexes of A, V, W, the bar of ł.
+**What Lamina changes** (each change is a rule applied to every glyph, in both
+masters, so all weights and the italic inherit it):
+
+1. **Slenderness.** The whole family is set at width 86 of the upstream width
+   axis: narrower letters, tighter text, a compact colour close to Diatype.
+2. **Lamella rhythm (flanks).** Where a curve turns vertical its handles are
+   lengthened, so bowls (o d b p e c O G D, figures) stand on straighter sides,
+   like a sheet of stone wrapped around a column.
+3. **Tiles.** Every dot (i j ż ö . ! ? : ÷) is a small stone tile with bent
+   corners instead of a sharp square.
+4. **Tabular figures change only the figures.** Upstream `tnum` also swapped the
+   word space for a figure-wide space, which spread words apart in tables.
+5. **Names.** New family name; the upstream Reserved Font Name is not used.
 
 | | |
 | --- | --- |
-| Weights | Regular 400, Medium 500, SemiBold 600, Bold 700 |
-| Characters | 337: Western and Central European Latin incl. full Polish and è |
-| Features | kerning, tabular figures `tnum`, case punctuation `case` |
-| Files | `fonts/web` (WOFF2 + `lamina.css`), `fonts/ttf` (hinted for Windows) |
-| Licence | SIL Open Font License 1.1 (commercial use allowed) |
-
-Every outline is drawn from scratch by the code in `src/`; no existing typeface
-is used as a base.
+| Weights | 400–700 variable; static Regular, Medium, SemiBold, Bold |
+| Styles | upright and italic |
+| Characters | 549 (Latin incl. full Polish, Vietnamese) |
+| Files | `fonts/web` (WOFF2 + `lamina.css`), `fonts/ttf` (hinted), `fonts/variable` |
+| Licence | SIL Open Font License 1.1 — see `OFL.txt` |
 
 ## Use
 
@@ -36,14 +42,14 @@ td.price { font-variant-numeric: tabular-nums; }
 ## Build
 
 ```sh
-pip install fonttools skia-pathops brotli ttfautohint-py
-python3 lamina/src/build.py --release     # fonts/ttf, fonts/web
-python3 lamina/src/specimen.py            # specimen.html
+pip install fontmake fonttools ufoLib2 skia-pathops brotli ttfautohint-py
+python3 lamina/src/build.py --italic     # fonts/variable, fonts/ttf, fonts/web
+python3 lamina/src/specimen.py           # specimen.html (needs the control fonts, see below)
 ```
 
-- `src/params.py` — metrics, weights, the rhythm (counters), spacing
-- `src/geom.py`, `src/fit.py` — skeletons, stroke expansion, boolean cuts
-- `src/parts.py` — the shared oval, arch, bend hooks, dot
-- `src/lower.py`, `upper.py`, `figures.py`, `punct.py`, `marks.py`, `accented.py` — the glyphs
-- `src/kerning.py` — kerning measured from the outlines
-- `LAMINA_WITHOUT=flank|bend|cut` builds a control font with one principle off (used by the specimen)
+- `sources/upstream/` — Zalando Sans source (`.glyphs`) and its licence
+- `src/build.py` — interpolates the two masters at width 86, applies the edits, compiles
+- `src/edits.py` — the Lamina rules: flank, tile, features, names
+- `src/release.py` — variable font, statics, hinting, WOFF2, CSS
+- `LAMINA_WITHOUT=flank|tile python3 lamina/src/build.py --out build/control/<name>.ttf`
+  builds a control font with one rule switched off (used by the specimen)
