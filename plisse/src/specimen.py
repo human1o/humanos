@@ -1,48 +1,48 @@
 #!/usr/bin/env python3
-"""Write plisse/specimen.html: a self-contained specimen (fonts embedded)."""
+"""Write plisse/specimen.html: a self-contained specimen (fonts embedded).
+
+Comparison fonts are built from upstream on the fly and subset to the text
+they show: Allo itself (ROND 30) and Allo at roundness 0 and 100."""
 import base64
+import io
+import re
 import sys
 from pathlib import Path
 
-from fontTools.pens.svgPathPen import SVGPathPen
-from fontTools.pens.transformPen import TransformPen
+from fontTools import subset
 from fontTools.ttLib import TTFont
+from fontTools.varLib import instancer
 
 ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT / "src"))
+import build as B  # noqa: E402
 
 
-def b64(path):
-    return base64.b64encode(Path(path).read_bytes()).decode()
+def b64(data):
+    return base64.b64encode(data).decode()
 
 
-def word_paths(font_path, word, scale=1.0):
-    f = TTFont(font_path)
-    gs = f.getGlyphSet()
-    cmap = f.getBestCmap()
-    x, out = 0, []
-    for ch in word:
-        g = gs[cmap[ord(ch)]]
-        pen = SVGPathPen(gs)
-        g.draw(TransformPen(pen, (1, 0, 0, 1, x, 0)))
-        out.append(pen.getCommands())
-        x += g.width
-    return out, x
+def woff2_bytes(font, text=None):
+    if text:
+        opts = subset.Options()
+        opts.layout_features = ["*"]
+        opts.flavor = "woff2"
+        opts.notdef_outline = True
+        sub = subset.Subsetter(opts)
+        sub.populate(text=text)
+        sub.subset(font)
+    font.flavor = "woff2"
+    buf = io.BytesIO()
+    font.save(buf)
+    return buf.getvalue()
 
 
 def glyph_count():
     return len(TTFont(ROOT / "fonts" / "ttf" / "Plisse-Regular.ttf").getBestCmap())
 
 
-PAGE = r'''<meta charset="utf-8">
-<title>Plissé</title>
-<meta name="claude:viewport-fit-sides" content="cover">
-<style>
-/* Layout: one quiet column on warm white, like a showroom wall; the letters are the only image. */
-@font-face{font-family:"Plisse";src:url(data:font/woff2;base64,__VF__) format("woff2");font-weight:400 700;font-style:normal;font-display:block}
-@font-face{font-family:"NoTile";src:url(data:font/woff2;base64,__NT__) format("woff2");font-weight:400 700;font-display:block}
-@font-face{font-family:"Upstream";src:url(data:font/woff2;base64,__UP__) format("woff2");font-weight:400 700;font-display:block}
-@font-face{font-family:"NoKreska";src:url(data:font/woff2;base64,__NK__) format("woff2");font-weight:400 700;font-display:block}
-@font-face{font-family:"NoForms";src:url(data:font/woff2;base64,__NF__) format("woff2");font-weight:400 700;font-display:block}
+CSS = r'''/* Layout: one quiet column on warm white, like a showroom wall; the letters are the only image. */
+__FACES__
 :root{
   --wall:#f5f5f3; --panel:#ffffff; --ink:#222220; --muted:#6b6a66; --rule:#dcdcd8; --stone:#a88e68; --dark:#0e0e0d; --on-dark:#ffffff;
   --font:"Plisse",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
@@ -162,14 +162,32 @@ code{font-family:inherit;font-feature-settings:"zero";background:var(--wall);bor
 footer{color:var(--muted);font-size:14px;border-top:1px solid var(--rule);padding-top:20px}
 footer p{max-width:80ch}
 footer a{color:inherit}
-</style>
+.vs3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border:1px solid var(--rule);border-radius:14px;overflow:hidden;background:var(--panel)}
+.vs3 > div{padding:18px 18px 16px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.vs3 > div + div{border-left:1px solid var(--rule)}
+.vs3 .big{font-size:clamp(64px,11vw,150px);line-height:1;letter-spacing:-.02em;white-space:nowrap;overflow:hidden;font-weight:700}
+.vs3 small{font-size:12px;color:var(--muted)}
+.vs3 .on small{color:var(--stone);font-weight:600}
+@media (max-width:640px){.vs3{grid-template-columns:1fr}.vs3 > div + div{border-left:0;border-top:1px solid var(--rule)}}
+.sizes{display:flex;flex-direction:column;gap:6px}
+.sizes .row{display:grid;grid-template-columns:64px minmax(0,1fr);gap:12px;align-items:baseline}
+.sizes .row small{font-size:12px;color:var(--muted)}
+.sizes .row div{white-space:nowrap;overflow:hidden;text-overflow:clip}
+.alts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1px;background:var(--rule);border:1px solid var(--rule);border-radius:14px;overflow:hidden}
+.alts > div{background:var(--panel);padding:16px 18px;display:flex;flex-direction:column;gap:6px;min-width:0}
+.alts b{font-size:40px;font-weight:400;line-height:1.1}
+.alts span{font-size:12px;color:var(--muted)}
+.alts code{font-size:12px}
+@media (max-width:640px){.alts{grid-template-columns:repeat(2,minmax(0,1fr))}}
+'''
 
+BODY = r'''
 <main>
 <section class="hero">
   <span class="label">Krój pisma Murèlle i Lamelio</span>
   <h1 class="mark">Plissé</h1>
-  <p class="idea">Cienki arkusz złożony w równy, pionowy rytm. Litery są okrągłe jak kamień, który się gnie, i stoją równo jak lamele w ścianie.</p>
-  <div class="meta"><span>400–700, font zmienny</span><span>4 grubości</span><span>__COUNT__ znaków</span><span>pełna polszczyzna</span><span>licencja OFL</span></div>
+  <p class="idea">Cienki arkusz złożony w równy, pionowy rytm. Krawędzie ma łagodne jak szlifowany kamień, a odstępy dopasowuje do rozmiaru, jak ściana lamel do światła.</p>
+  <div class="meta"><span>400–700</span><span>wielkość optyczna 9–32, sama się ustawia</span><span>__COUNT__ znaków</span><span>pełna polszczyzna</span><span>licencja OFL</span></div>
   <div class="names">
     <div><b style="font-weight:400">Murèlle</b><span>400 Regular</span></div>
     <div><b style="font-weight:500">Lamelio</b><span>500 Medium</span></div>
@@ -181,73 +199,84 @@ footer a{color:inherit}
 <section>
   <div class="head"><span class="label">Filozofia</span>
   <h2>Plisa: arkusz, który się gnie, złożony w równy rytm</h2></div>
-  <p class="lede">Plisa to cienki materiał złożony w pionowe fałdy tej samej szerokości. Murèlle to arkusz kamienia, który owija słup. Lamelio to ściana z lamel w równych odstępach. Plissé łączy jedno z drugim i nie dodaje niczego więcej.</p>
+  <p class="lede">Plisa to cienki materiał złożony w pionowe fałdy tej samej szerokości. Murèlle to arkusz kamienia, który owija słup. Lamelio to ściana z lamel w równych odstępach. Plissé bierze z obu tylko to, co widać w literach, i nie dodaje niczego więcej.</p>
   <div class="pillars">
-    <div><span class="n">Gięcie</span><b>Okrągłe jak kamień, który się gnie</b><p>O, e, s i 0 wypełniają swój prostokąt tak samo jak w Diatype. Nic nie jest ostre ani odlane, końcówki są cięte poziomo i spokojnie.</p></div>
-    <div><span class="n">Rytm</span><b>Równe jak lamele</b><p>Pionowe kreski stoją w równych odstępach. W tekście każda cyfra ma swoją szerokość, a w tabeli wszystkie jedną, więc ceny stoją jedna pod drugą.</p></div>
-    <div><span class="n">Płytka</span><b>Jeden detal, który się pamięta</b><p>Każda kropka to mała płytka kamienia z giętymi rogami: w i, ż, w kropce, w dwukropku, a na życzenie także w środku zera.</p></div>
+    <div><span class="n">Krawędź</span><b>Szlifowana, nie ostra i nie odlana</b><p>Narożniki są złagodzone tak jak krawędź arkusza kamienia: wyraźnie, ale bez zaokrąglania na siłę. To jedno ustawienie, takie samo w każdej literze.</p></div>
+    <div><span class="n">Rytm</span><b>Odstępy idą za rozmiarem</b><p>W tabeli przy 12 px litery mają więcej powietrza, w nagłówku przy 64 px stoją ciaśniej i precyzyjniej. Przeglądarka dobiera to sama.</p></div>
+    <div><span class="n">Płytka</span><b>Kamień w zerze</b><p>W numerach zamówień zero ma w środku małą płytkę, więc 0 nigdy nie myli się z O. Cyfry w tabeli stoją równo, łącznie z jedynką.</p></div>
   </div>
 </section>
 
 <section>
   <div class="head"><span class="label">Skąd się wziął</span>
-  <h2>Zbudowany na Instrument Sans, najokrąglejszym bliskim Diatype otwartym kroju</h2></div>
-  <p class="lede">Zestawiliśmy z planszą Diatype ponad dziewięćdziesiąt otwartych grotesków, litera przy literze, w tych samych proporcjach, i zmierzyliśmy, jak bardzo każde O, e, s, 0 i 8 wypełnia swój prostokąt. Najbliżej był Instrument Sans (Rodrigo Fuenzalida, Jordan Egstad, licencja OFL): okrągłe brzuśce, poziomo cięte końcówki e, c, s, jednopiętrowe g, y z prostym ogonem, okrągłe 6 i 9. Plissé bierze go w szerokości 97 i grubości 430, czyli z tym samym pniem i tą samą szerokością co Diatype, a potem dokłada cztery zasady.</p>
+  <h2>Zbudowany na Allo, bez przerysowywania</h2></div>
+  <p class="lede">Podstawą jest Allo Josha Pucketta (licencja OFL), wyrosły z Inter Rasmusa Anderssona: krój zrobiony do ekranów, z wielkością optyczną, cyframi tabelarycznymi, ułamkami i pełną łaciną. Plissé bierze go w wersji 1.0.1 i zmienia tylko to, czego nie da się zepsuć: ustawia oś zaokrąglenia, zawęża grubości, kieruje funkcję zero na inną z jego własnych cyfr, dokłada kerning tam, gdzie litery się stykały, i poprawia jedną cyfrę. Test w repozytorium porównuje każdą literę z Allo w czterech rozmiarach i grubościach: poza tabelaryczną jedynką wszystkie są identyczne.</p>
 </section>
 
 <section>
-  <div class="head"><span class="label">Ta sama plansza co Diatype</span><h2>Postaw obok swojej grafiki</h2></div>
-  <div style="background:#6ba808;color:#fff;border-radius:14px;padding:22px 20px 26px;display:flex;flex-direction:column;align-items:center;gap:18px;overflow:hidden">
-    <div style="font-size:12px">Plissé</div>
-    <div style="font-size:clamp(26px,5.6vw,64px);line-height:1.02;text-align:center;letter-spacing:-.005em">Plissé Regular<br>EFGHIJKLMN<br>OPQRSTUVWXYZ<br>äbcdefghijklmnöpqrstu<br>vwxyz 0123456789<br>.,:;…!¡?¿‹›«»()[]{}\/|#%<br>$€£¢&amp;&lt;&gt;@©®•™°*</div>
+  <div class="law">
+    <div><span class="n">Zasada 1</span><h3>Krawędź szlifowanego kamienia</h3>
+      <p><strong>Zaokrąglenie ustawione na 30 ze 100.</strong> Przy 0 krój jest cięty ostro i robi się chłodny, przy 100 wygląda na odlany. 30 to krawędź arkusza po szlifie: przy dużym rozmiarze widać miękkość, przy małym zostaje precyzja. Allo ma przy 30 własne wzorce rysunku, więc to ustawienie zaprojektowane, a nie wyliczone.</p></div>
+    <div></div>
+  </div>
+  <div class="vs3">
+    <div><small>Ostra, 0</small><div class="big" style="font-family:Rond0">tRk.ł1</div></div>
+    <div class="on"><small>Plissé, 30</small><div class="big">tRk.ł1</div></div>
+    <div><small>Odlana, 100</small><div class="big" style="font-family:Rond100">tRk.ł1</div></div>
   </div>
 </section>
 
 <section>
   <div class="law">
-    <div><span class="n">Zasada 1</span><h3>Proporcje Diatype</h3>
-      <p><strong>Szerokość, grubość i odstępy wzięte z Diatype, nie z bazy.</strong> Pień Regular ma tę samą grubość co w Diatype, litery są o 3 % węższe niż w Instrument Sans, a małe litery stoją ciaśniej, żeby alfabet miał tę samą długość co na planszy Diatype przy tej samej wysokości wersalików. Po prawej Instrument Sans bez zmian.</p></div>
+    <div><span class="n">Zasada 2</span><h3>Rozmiar ustawia rytm</h3>
+      <p><strong>Wielkość optyczna działa sama.</strong> Przy 12 px litery stoją luźniej i łatwiej je przeczytać w tabeli, przy 64 px ściślej, jak lamele ustawione do światła. Nie trzeba niczego włączać: przeglądarka robi to z rozmiaru tekstu. Po prawej ten sam tekst z jednym rysunkiem w każdym rozmiarze.</p></div>
     <div></div>
   </div>
   <div class="vs">
-    <div><small>Plissé</small><div class="big">kamień</div><div class="line">Zamówienia partnerów przyjęte w tym tygodniu: 12 480,00 zł</div></div>
-    <div><small>Baza bez zmian</small><div class="big off" style="font-family:Upstream">kamień</div><div class="line off" style="font-family:Upstream">Zamówienia partnerów przyjęte w tym tygodniu: 12 480,00 zł</div></div>
+    <div><small>Plissé, rozmiar ustawia odstępy</small><div class="sizes">
+      <div class="row"><small>12 px</small><div style="font-size:12px">Travertino Avorio · 1200 × 600 mm · 389,00 zł/m²</div></div>
+      <div class="row"><small>16 px</small><div style="font-size:16px">Travertino Avorio · 1200 × 600 mm</div></div>
+      <div class="row"><small>64 px</small><div style="font-size:64px;line-height:1.05;letter-spacing:-.01em">Lamelio</div></div></div></div>
+    <div><small>Bez tego, jeden rysunek</small><div class="sizes off" style="font-optical-sizing:none">
+      <div class="row"><small>12 px</small><div style="font-size:12px">Travertino Avorio · 1200 × 600 mm · 389,00 zł/m²</div></div>
+      <div class="row"><small>16 px</small><div style="font-size:16px">Travertino Avorio · 1200 × 600 mm</div></div>
+      <div class="row"><small>64 px</small><div style="font-size:64px;line-height:1.05;letter-spacing:-.01em">Lamelio</div></div></div></div>
   </div>
 </section>
 
 <section>
   <div class="law">
-    <div><span class="n">Zasada 2</span><h3>Kropka jak płytka</h3>
-      <p><strong>Każda kropka to mała płytka kamienia z giętymi rogami.</strong> Arkusz kamienia nie ma ostrych krawędzi, więc kropka też nie: i, j, ż, ö, kropka, wielokropek, wykrzyknik, pytajnik, dwukropek, punktor, także w ligaturze fi. Ta sama płytka może stanąć w środku zera (funkcja <code>zero</code>), żeby w numerach zamówień 0 nigdy nie myliło się z O. W bazie kropki są ostrymi kwadratami.</p></div>
+    <div><span class="n">Zasada 3</span><h3>Płytka w zerze</h3>
+      <p><strong>Funkcja <code>zero</code> daje zero z kamienną płytką w środku,</strong> zamiast przekreślenia, które Allo ma pod tą funkcją. Przekreślone zero wygląda technicznie, a płytka pasuje do kroju. Włącza się ją na numerach zamówień, faktur i SKU, a w zwykłym tekście zero zostaje czyste.</p></div>
     <div></div>
   </div>
   <div class="vs">
-    <div><small>Z zasadą</small><div class="big">żij!?</div><div class="line">Zażółć gęślą jaźń. Tak, tak!</div><div class="line" style="font-feature-settings:'zero'">MU-2026-01184 · KOD O0O0</div></div>
-    <div><small>Bez zasady</small><div class="big off" style="font-family:NoTile">żij!?</div><div class="line off" style="font-family:NoTile">Zażółć gęślą jaźń. Tak, tak!</div><div class="line off" style="font-family:NoTile">MU-2026-01184 · KOD O0O0</div></div>
+    <div><small>Plissé, funkcja zero</small><div class="big" style="font-feature-settings:'zero';font-size:clamp(30px,4.6vw,64px)">MU-2026-01184</div><div class="line" style="font-feature-settings:'zero'">Kod O0O0 · Faktura FV/2026/0118</div></div>
+    <div><small>Allo, funkcja zero</small><div class="big off" style="font-family:Allo;font-feature-settings:'zero';font-size:clamp(30px,4.6vw,64px)">MU-2026-01184</div><div class="line off" style="font-family:Allo;font-feature-settings:'zero'">Kod O0O0 · Faktura FV/2026/0118</div></div>
   </div>
 </section>
 
 <section>
   <div class="law">
-    <div><span class="n">Zasada 3</span><h3>Formy, które się gną</h3>
-      <p><strong>Tam, gdzie baza ma dwie formy, Plissé wybiera tę bliższą Diatype i ją dociąga.</strong> R ma nogę wychodzącą z brzuśca i opadającą prawie pionowo. Ogonek Q zaczyna się w środku litery i kończy pod jej prawym bokiem; narysowaliśmy go od nowa według pomiaru z Diatype. Dolar i cent mają kreskę przeprowadzoną przez całą literę. W tekście jedynka nie ma stopki, jak w Diatype. W tabeli, gdzie każda cyfra ma tę samą szerokość, dostaje szeroką stopkę i dłuższą flagę, żeby nie stała w dziurze. Po prawej formy z bazy.</p></div>
+    <div><span class="n">Zasada 4</span><h3>Jedynka nie stoi w dziurze</h3>
+      <p><strong>W tabeli każda cyfra ma tę samą szerokość, więc wąska jedynka zostawia puste miejsce.</strong> Allo daje jej stopkę, ale „11” wciąż ma o 68 jednostek na 1000 więcej światła niż typowa para cyfr. W każdym z 12 wzorców Plissé poszerza stopkę i ustawia jedynkę według pomiaru białego pola. Wynik: „11” +5, „81” −7, w nagłówku najwyżej +13.</p></div>
     <div></div>
   </div>
   <div class="vs">
-    <div><small>Z zasadą</small><div class="big">QR$1</div><div class="line" style="font-variant-numeric:tabular-nums">Quarzite Rosso, 1 111,10 zł</div></div>
-    <div><small>Bez zasady</small><div class="big off" style="font-family:NoForms">QR$1</div><div class="line off" style="font-family:NoForms;font-variant-numeric:tabular-nums">Quarzite Rosso, 1 111,10 zł</div></div>
+    <div><small>Plissé, cyfry tabelaryczne</small><div class="big" style="font-variant-numeric:tabular-nums;font-size:clamp(44px,7vw,92px)">12.11 · 1 111</div><div class="line" style="font-variant-numeric:tabular-nums">167,81 zł · 11 111,10 zł · 12.11.2026</div></div>
+    <div><small>Allo, cyfry tabelaryczne</small><div class="big off" style="font-family:Allo;font-variant-numeric:tabular-nums;font-size:clamp(44px,7vw,92px)">12.11 · 1 111</div><div class="line off" style="font-family:Allo;font-variant-numeric:tabular-nums">167,81 zł · 11 111,10 zł · 12.11.2026</div></div>
   </div>
 </section>
 
 <section>
   <div class="law">
-    <div><span class="n">Zasada 4</span><h3>Kreska po polsku</h3>
-      <p><strong>Ó, ś, ć, ń, ź mają polską kreskę: stromą i zwartą, a nie płaski akcent francuski.</strong> Stoi pod kątem 62° zamiast 50°, ma tę samą grubość i nadal siedzi odrobinę na prawo od osi litery. Gravis w è z Murèlle jest jej lustrzanym odbiciem, więc oba akcenty się rymują. Po prawej akcenty z bazy.</p></div>
+    <div><span class="n">Zasada 5</span><h3>Polskie litery w nagłówku się nie stykają</h3>
+      <p><strong>W dużym rozmiarze i grubym kroju ł w Allo wchodziło na sąsiednie litery:</strong> „światło”, „zmarł”, „cło”, a także „Ąj” i „Tè”. Plissé mierzy każdą parę z 9 tysięcy w 12 wzorcach i dokłada kerning tylko tam, gdzie litery się stykały. Kerning zmienia się z rozmiarem i grubością, a żadna para nie stoi ciaśniej niż w Allo.</p></div>
     <div></div>
   </div>
   <div class="vs">
-    <div><small>Z zasadą</small><div class="big">Ćwierć</div><div class="line">Źródło, śnieg, łóżko, Murèlle</div></div>
-    <div><small>Bez zasady</small><div class="big off" style="font-family:NoKreska">Ćwierć</div><div class="line off" style="font-family:NoKreska">Źródło, śnieg, łóżko, Murèlle</div></div>
+    <div><small>Plissé, 700</small><div class="big" style="font-weight:700;font-size:clamp(44px,7vw,92px)">światło zmarł</div><div class="line" style="font-weight:700;font-size:clamp(28px,4vw,48px)">Cło · Ąj · Tè · łf</div></div>
+    <div><small>Allo, 700</small><div class="big off" style="font-family:Allo;font-weight:700;font-size:clamp(44px,7vw,92px)">światło zmarł</div><div class="line off" style="font-family:Allo;font-weight:700;font-size:clamp(28px,4vw,48px)">Cło · Ąj · Tè · łf</div></div>
   </div>
 </section>
 
@@ -257,14 +286,27 @@ footer a{color:inherit}
     <div>ABCDEFGHIJKLMNOPQRSTUVWXYZ</div>
     <div>abcdefghijklmnopqrstuvwxyz</div>
     <div>0123456789</div>
-    <div class="sm">ĄĆĘŁŃÓŚŹŻ ąćęłńóśźż è ß æ œ ø</div>
-    <div class="sm">&amp; @ € $ % “ ” „ ” « » ( ) [ ] { } / → ↗ ± × ÷ ≤ ≥ ≠ ½ ¼ ¾ m² m³ 5′3″</div>
+    <div class="sm">ĄĆĘŁŃÓŚŹŻ ąćęłńóśźż è é ß æ œ ø</div>
+    <div class="sm">&amp; @ € $ % “ ” „ ” « » ( ) [ ] { } / → ↗ ✓ ± × ÷ ≤ ≥ ≠ ½ ¼ ¾ m² m³ 5′3″</div>
+  </div>
+</section>
+
+<section>
+  <div class="head"><span class="label">Alternatywy</span><h2>Wszystko, co Allo ma w zanadrzu, zostaje</h2>
+  <p class="lede">Domyślnie Plissé ma dwupiętrowe a, prostą pionową l jak lamelę i zamknięte cyfry. Alternatywy Allo działają dalej i włącza się je w CSS przez <code>font-feature-settings</code>.</p></div>
+  <div class="alts">
+    <div><b style="font-feature-settings:'ss01'">aąá</b><span><code>ss01</code> jednopiętrowe a</span></div>
+    <div><b style="font-feature-settings:'ss02'">Il1 0</b><span><code>ss02</code> rozróżnienie I, l, 1, 0</span></div>
+    <div><b style="font-feature-settings:'ss03'">469</b><span><code>ss03</code> otwarte 4, 6, 9</span></div>
+    <div><b style="font-feature-settings:'cv03'">lł</b><span><code>cv03</code> l z ogonkiem</span></div>
+    <div><b style="font-feature-settings:'liga'">ft tt ff</b><span><code>liga</code> wspólna poprzeczka, domyślnie</span></div>
+    <div><b style="font-feature-settings:'frac'">1/2 3/4</b><span><code>frac</code> ułamki</span></div>
   </div>
 </section>
 
 <section>
   <div class="head"><span class="label">Cyfry</span><h2>Cyfry jak litery najwyższej wagi</h2>
-  <p class="lede">Cyfry mają jeden rysunek. W tekście i w nagłówkach są proporcjonalne, jak w Diatype, więc jedynka nigdy nie stoi w dziurze. W tabelach i cennikach włącza się cyfry tabelaryczne (<code>font-variant-numeric: tabular-nums</code>). Tam jedynka ma szeroką stopkę i dłuższą flagę, a białe pole po jej obu stronach jest takie jak przy innych cyfrach: „11” i „81” stoją równo z „00” i „88”.</p></div>
+  <p class="lede">W tekście i nagłówkach cyfry są proporcjonalne. W tabelach i cennikach włącza się cyfry tabelaryczne (<code>font-variant-numeric: tabular-nums</code>): tam jedynka ma stopkę, a białe pole wokół niej jest takie jak przy innych cyfrach.</p></div>
   <div class="figs">
     <div><span class="label">Tabelaryczne, w cenniku</span><div class="col">12 480,00 zł<br>9 315,60 zł<br>1 111,10 zł<br>407,90 zł</div></div>
     <div><span class="label">Domyślne, w tekście</span><div class="prop">12 480,00 zł<br>9 315,60 zł<br>1 111,10 zł<br>407,90 zł</div></div>
@@ -276,7 +318,7 @@ footer a{color:inherit}
   <div class="head"><span class="label">Akapit</span><h2>Tekst, który czyta się bez zmęczenia</h2></div>
   <div class="para">
     <div><small>16 px · 400</small><p style="font-size:16px;line-height:1.55">Murèlle to cienkie arkusze prawdziwego kamienia: trawertynu, wapienia, łupka. Są tak elastyczne, że owijają łuk, słup i narożnik ściany. Kamień, który się nie łamie, tylko gnie. Lamelio to ściany z lamel: pionowy rytm, ta sama szerokość, ten sam odstęp, a resztę robi światło. Żadnego blichtru, tylko ciepła biel, faktura i światło.</p></div>
-    <div><small>13 px · 400 i 600</small><p style="font-size:13px;line-height:1.55">Zamówienie <b style="font-weight:600">MU-2026-01184</b> zostało przyjęte. Flexible Stone, Travertino Avorio, format 1200 × 600 mm, 48 szt. Dostawa w czwartek, 19 listopada, na adres: ul. Źródlana 7, 50-541 Wrocław. Gwarancja jakości obejmuje każdą płytę; łączenia wykonujemy bez fug.</p>
+    <div><small>13 px · 400 i 600</small><p style="font-size:13px;line-height:1.55">Zamówienie <b style="font-weight:600;font-feature-settings:'zero'">MU-2026-01184</b> zostało przyjęte. Flexible Stone, Travertino Avorio, format 1200 × 600 mm, 48 szt. Dostawa w czwartek, 19 listopada, na adres: ul. Źródlana 7, 50-541 Wrocław. Gwarancja jakości obejmuje każdą płytę; łączenia wykonujemy bez fug.</p>
       <small style="margin-top:14px">12 px · 600, wersaliki</small><p class="label" style="font-size:12px;color:var(--ink)">Panel partnera · Zamówienia (3) · Konfigurator ściany</p></div>
   </div>
 </section>
@@ -324,7 +366,7 @@ footer a{color:inherit}
     <div class="controls">
       <label for="wt">Grubość <input id="wt" type="range" min="400" max="700" value="400" step="1"><output id="wto">400</output></label>
       <label for="sz">Rozmiar <input id="sz" type="range" min="12" max="160" value="64"><output id="szo">64</output></label>
-      <div class="seg"><button id="tn" aria-pressed="false">Cyfry tabelaryczne</button></div>
+      <div class="seg"><button id="tn" aria-pressed="false">Cyfry tabelaryczne</button><button id="zr" aria-pressed="false">Zero z płytką</button></div>
     </div>
     <div id="sample" contenteditable="true" spellcheck="false" aria-label="Tekst próbny">Zażółć gęślą jaźń. Plissé 12 480,00 zł</div>
   </div>
@@ -333,27 +375,29 @@ footer a{color:inherit}
 <section>
   <div class="head"><span class="label">Pliki</span><h2>Gotowe do sieci i do instalacji</h2></div>
   <div class="facts">
-    <div><b>400–700</b><span>font zmienny oraz 4 grubości statyczne</span></div>
-    <div><b>4 pliki TTF</b><span>z hintingiem dla Windows, do instalacji</span></div>
-    <div><b>__COUNT__ znaków</b><span>łacina europejska, w tym pełna polszczyzna</span></div>
+    <div><b>1 plik do sieci</b><span>font zmienny: grubość 400–700 i wielkość optyczna 9–32, ok. 190 kB</span></div>
+    <div><b>4 pliki TTF</b><span>Regular, Medium, SemiBold, Bold, z hintingiem dla Windows</span></div>
+    <div><b>__COUNT__ znaków</b><span>łacina europejska i wietnamska, pełna polszczyzna</span></div>
     <div><b>OFL 1.1</b><span>wolno używać komercyjnie</span></div>
   </div>
 </section>
 
-<footer><p>Plissé 1.002, krój pisma Murèlle i Lamelio. Na bazie <a href="https://github.com/Instrument/instrument-sans">Instrument Sans</a> (Rodrigo Fuenzalida, Jordan Egstad, licencja SIL Open Font License 1.1). Plissé ustawia szerokość i grubość według Diatype, zagęszcza małe litery, zamienia kropki na płytki, dodaje zero z płytką, rysuje nowy ogonek Q i polską kreskę, wybiera formy R, $ i ¢, rysuje tabelaryczną jedynkę ze stopką tak, by nie stała w dziurze, pilnuje, żeby żadna para liter się nie stykała, dodaje m², m³, ułamki, ±, ≤, ≥, ≠ i spacje do liczb, przenosi strzałki „-&gt;” i „www” z domyślnych ligatur do opcjonalnych i nadaje nowe nazwy.</p></footer>
+<footer><p>Plissé __VER__, krój pisma Murèlle i Lamelio. Na bazie <a href="https://github.com/joshpuckett/allo">Allo</a> 1.0.1 Josha Pucketta, który wyrósł z <a href="https://github.com/rsms/inter">Inter</a> Rasmusa Anderssona (oba na licencji SIL Open Font License 1.1). Plissé ustawia zaokrąglenie na 30, zawęża grubości do 400–700, poszerza stopkę tabelarycznej jedynki i ustawia ją według pomiaru, kieruje funkcję zero na zero z płytką, dokłada zmienny kerning tam, gdzie litery się stykały, poprawia metryki Windows tak, by żaden akcent nie był przycinany, i nadaje nowe nazwy.</p></footer>
 </main>
 
 <script>
 (function(){
-  var s=document.getElementById('sample'),sz=document.getElementById('sz'),so=document.getElementById('szo'),wt=document.getElementById('wt'),wto=document.getElementById('wto'),tn=document.getElementById('tn');
-  var tab=false;
+  var s=document.getElementById('sample'),sz=document.getElementById('sz'),so=document.getElementById('szo'),wt=document.getElementById('wt'),wto=document.getElementById('wto'),tn=document.getElementById('tn'),zr=document.getElementById('zr');
+  var tab=false,zero=false;
   function apply(){
     var max=Math.max(12,(s.clientWidth-36)/3.2);
     s.style.fontSize=Math.min(+sz.value,max)+'px';so.textContent=sz.value;
     s.style.fontWeight=wt.value;wto.textContent=wt.value;
-s.style.fontVariantNumeric=tab?'tabular-nums':'normal';
+    s.style.fontVariantNumeric=tab?'tabular-nums':'normal';
+    s.style.fontFeatureSettings=zero?'"zero"':'normal';
   }
   tn.addEventListener('click',function(){tab=!tab;tn.setAttribute('aria-pressed',String(tab));apply();});
+  zr.addEventListener('click',function(){zero=!zero;zr.setAttribute('aria-pressed',String(zero));apply();});
   sz.addEventListener('input',apply);wt.addEventListener('input',apply);window.addEventListener('resize',apply);apply();
 })();
 </script>
@@ -362,7 +406,6 @@ s.style.fontVariantNumeric=tab?'tabular-nums':'normal';
 
 def nbsp(page):
     """Amounts never break: 12 480,00 zł, 1200 × 600 mm (only inside <main>)."""
-    import re
     a, b = page.index("<main>"), page.index("</main>")
     body = page[a:b]
     body = re.sub(r"(\d) (?=\d{3}\b)", "\\1\u00a0", body)
@@ -372,16 +415,25 @@ def nbsp(page):
 
 
 def main():
-    web = ROOT / "fonts" / "web"
-    ctl = ROOT / "build" / "control"
-    html = (nbsp(PAGE).replace("__VF__", b64(web / "Plisse[wght].woff2"))
-            .replace("__NT__", b64(ctl / "notile.woff2"))
-            .replace("__UP__", b64(ctl / "upstream.woff2"))
-            .replace("__NF__", b64(ctl / "noforms.woff2"))
-            .replace("__NK__", b64(ctl / "nokreska.woff2"))
-            .replace("__COUNT__", str(glyph_count())))
+    up = TTFont(B.UPSTREAM)
+    allo = woff2_bytes(B.pin(), "MU-2026-01184 Kod O0O0 Faktura FV/2026/0118 12.11 · 1 111 167,81 zł 11 111,10 12.11.2026 światło zmarł Cło · Ąj · Tè · łf")
+    rond = {}
+    for r in (0, 100):
+        f = instancer.instantiateVariableFont(TTFont(B.UPSTREAM), {"ROND": r, "wght": (400, 700)})
+        rond[r] = woff2_bytes(f, "tRk.ł1")
+    vf = (ROOT / "fonts" / "web" / "Plisse[opsz,wght].woff2").read_bytes()
+    faces = "\n".join([
+        f'@font-face{{font-family:"Plisse";src:url(data:font/woff2;base64,{b64(vf)}) format("woff2");font-weight:400 700;font-style:normal;font-display:block}}',
+        f'@font-face{{font-family:"Allo";src:url(data:font/woff2;base64,{b64(allo)}) format("woff2");font-weight:400 700;font-display:block}}',
+        f'@font-face{{font-family:"Rond0";src:url(data:font/woff2;base64,{b64(rond[0])}) format("woff2");font-weight:400 700;font-display:block}}',
+        f'@font-face{{font-family:"Rond100";src:url(data:font/woff2;base64,{b64(rond[100])}) format("woff2");font-weight:400 700;font-display:block}}',
+    ])
+    ver = f"{B.VERSION[0]}.{B.VERSION[1]:03d}"
+    page = ('<meta charset="utf-8">\n<title>Plissé</title>\n<meta name="claude:viewport-fit-sides" content="cover">\n<style>\n'
+            + CSS.replace("__FACES__", faces) + "</style>\n" + BODY)
+    page = nbsp(page).replace("__COUNT__", str(glyph_count())).replace("__VER__", ver)
     out = ROOT / "specimen.html"
-    out.write_text(html)
+    out.write_text(page)
     print(out, out.stat().st_size)
 
 

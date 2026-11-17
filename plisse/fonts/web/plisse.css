@@ -1,8 +1,9 @@
-/* Plissé 1.002: Regular 400, Medium 500, SemiBold 600, Bold 700.
-   Paths are relative to this file; ?v= makes browsers fetch a new release. */
+/* Plissé 2.000: one variable font, weight 400–700, optical size 9–32.
+   The optical size follows the font size by itself (font-optical-sizing: auto).
+   ?v= makes browsers fetch a new release. SIL Open Font License 1.1. */
 @font-face {
   font-family: "Plisse";
-  src: url("Plisse[wght].woff2?v=1.002") format("woff2");
+  src: url("Plisse[opsz,wght].woff2?v=2.000") format("woff2");
   font-weight: 400 700;
   font-style: normal;
   font-display: swap;
@@ -14,5 +15,5 @@
 
 /* Prices, tables, totals: every figure the same width, columns line up. */
 .plisse-tabular { font-variant-numeric: tabular-nums; }
-/* Order numbers and codes: 0 with a tile inside, never confused with O. */
+/* Order numbers and codes: 0 with a stone tile inside, never read as O. */
 .plisse-code { font-feature-settings: "zero"; }
