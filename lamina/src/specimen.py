@@ -50,7 +50,6 @@ PAGE = r'''<meta charset="utf-8">
 /* Layout: one quiet column on warm white, like a showroom wall; the letters are the only image. */
 @font-face{font-family:"Lamina";src:url(data:font/woff2;base64,__VF__) format("woff2");font-weight:400 700;font-style:normal;font-display:block}
 @font-face{font-family:"Lamina";src:url(data:font/woff2;base64,__VFI__) format("woff2");font-weight:400 700;font-style:italic;font-display:block}
-@font-face{font-family:"NoFlank";src:url(data:font/woff2;base64,__NF__) format("woff2");font-weight:400 700;font-display:block}
 @font-face{font-family:"NoTile";src:url(data:font/woff2;base64,__NT__) format("woff2");font-weight:400 700;font-display:block}
 @font-face{font-family:"Upstream";src:url(data:font/woff2;base64,__UP__) format("woff2");font-weight:400 700;font-display:block}
 :root{
@@ -103,7 +102,7 @@ section{display:flex;flex-direction:column;gap:30px}
 .figs{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:20px}
 .figs > div{border:1px solid var(--rule);border-radius:14px;background:var(--panel);padding:18px 20px;display:flex;flex-direction:column;gap:10px;min-width:0}
 .figs .col{font-size:22px;line-height:1.45;font-variant-numeric:tabular-nums;text-align:right}
-.figs .prop{font-size:22px;line-height:1.45;text-align:right}
+.figs .prop{font-size:22px;line-height:1.45;text-align:right;font-variant-numeric:proportional-nums}
 .figs .giant{font-size:clamp(72px,10vw,120px);line-height:1;letter-spacing:-.02em}
 .para{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:36px 48px}
 .para > div{display:flex;flex-direction:column;gap:8px;min-width:0}
@@ -152,7 +151,7 @@ footer a{color:inherit}
 <section class="hero">
   <span class="label">Krój pisma Murèlle i Lamelio</span>
   <h1 class="mark">Lamina</h1>
-  <p class="idea">Smukły grotesk na rytmie lameli: brzuśce stoją na prostych bokach jak płyta kamienia owinięta wokół słupa, a kropki to małe płytki.</p>
+  <p class="idea">Ciepły, precyzyjny grotesk w temperaturze ABC Diatype: złożony ciasno jak ściana z lamel, z kropkami jak małe płytki kamienia.</p>
   <div class="meta"><span>400–700, font zmienny</span><span>prosty i kursywa</span><span>__COUNT__ znaków</span><span>pełna polszczyzna</span><span>licencja OFL</span></div>
   <div class="names">
     <div><b style="font-weight:400">Murèlle</b><span>400 Regular</span></div>
@@ -164,38 +163,34 @@ footer a{color:inherit}
 
 <section>
   <div class="head"><span class="label">Skąd się wziął</span>
-  <h2>Zbudowany na Zalando Sans, ukryty klejnot z 2025 roku</h2></div>
-  <p class="lede">Bazą jest Zalando Sans, krój narysowany przez Jakoba Ekelunda ze sztokholmskiej odlewni KH Type i wydany na wolnej licencji OFL. Ma już to, co cenimy w Diatype: proste trzony bez ostróg w a, u, d, q, G bez ostrogi, J bez daszka, poziome cięcia końcówek i dopracowane polskie znaki. Lamina ustawia go w smukłej proporcji i dodaje dwie rzeczy, które wynikają z materii Murèlle i Lamelio.</p>
+  <h2>Zbudowany na Hanken Grotesk, najbliższym Diatype otwartym kroju</h2></div>
+  <p class="lede">Porównaliśmy z Diatype ponad pięćdziesiąt otwartych grotesków, na tej samej planszy i w tych samych proporcjach. Najbliżej był Hanken Grotesk (Alfredo Marco Pradil, Hanken Design Co., licencja OFL): G z ostrogą i poprzeczką, R z prostą nogą, ukośnie cięte t, y z prostym ogonem, jednopiętrowe g, 1 z flagą bez stopki, zamknięte 4, okrągłe O. Lamina dociąga go do Diatype tam, gdzie da się to zmierzyć, i dodaje własny detal.</p>
+</section>
+
+<section>
+  <div class="head"><span class="label">Ta sama plansza co Diatype</span><h2>Postaw obok swojej grafiki</h2></div>
+  <div style="background:#6ba808;color:#fff;border-radius:14px;padding:22px 20px 26px;display:flex;flex-direction:column;align-items:center;gap:18px;overflow:hidden">
+    <div style="font-size:12px">Lamina</div>
+    <div style="font-size:clamp(26px,5.6vw,64px);line-height:1.02;text-align:center;letter-spacing:-.005em">Lamina Regular<br>EFGHIJKLMN<br>OPQRSTUVWXYZ<br>äbcdefghijklmnöpqrstu<br>vwxyz 0123456789<br>.,:;…!¡?¿‹›«»()[]{}\/|#%<br>$€£¢&amp;&lt;&gt;@©®•™°*</div>
+  </div>
 </section>
 
 <section>
   <div class="law">
-    <div><span class="n">Zasada 1</span><h3>Smukłość</h3>
-      <p><strong>Cała rodzina stoi w szerokości 86 z osi Zalando Sans.</strong> Litery są węższe i ciaśniej złożone, jak lamele w ścianie. Linijka mieści więcej, a tekst ma zwarty, spokojny kolor, bliski Diatype. Po prawej ta sama baza w swojej domyślnej, szerokiej proporcji.</p></div>
+    <div><span class="n">Zasada 1</span><h3>Proporcje Diatype</h3>
+      <p><strong>Małe litery i cyfry złożone są ciaśniej niż w bazie,</strong> tak żeby alfabet i cyfry miały tę samą długość co w Diatype przy tej samej wysokości wersalików. Zmierzyliśmy to na planszy Diatype: różnica wynosi 1–2 % na każdej linii. Wersaliki zostają jak w bazie, bo tam proporcje już się zgadzały. Po prawej baza bez zmian.</p></div>
     <div></div>
   </div>
   <div class="vs">
-    <div><small>Lamina</small><div class="big">Okładziny</div><div class="line">Zamówienia partnerów przyjęte w tym tygodniu</div></div>
-    <div><small>Baza w domyślnej szerokości</small><div class="big off" style="font-family:Upstream">Okładziny</div><div class="line off" style="font-family:Upstream">Zamówienia partnerów przyjęte w tym tygodniu</div></div>
+    <div><small>Lamina</small><div class="big">kamień</div><div class="line">Zamówienia partnerów przyjęte w tym tygodniu: 12 480,00 zł</div></div>
+    <div><small>Baza bez zmian</small><div class="big off" style="font-family:Upstream">kamień</div><div class="line off" style="font-family:Upstream">Zamówienia partnerów przyjęte w tym tygodniu: 12 480,00 zł</div></div>
   </div>
 </section>
 
 <section>
   <div class="law">
-    <div><span class="n">Zasada 2</span><h3>Rytm lameli</h3>
-      <p><strong>Tam, gdzie krzywa staje pionowo, wydłużamy jej uchwyty.</strong> Brzuśce o, d, b, p, e, c, O, G, D i cyfry stają na prostszych bokach, jak płyta owinięta wokół słupa, a okrągłe litery dokładają się do pionowego rytmu trzonów. Reguła działa tak samo w każdym znaku, w każdej grubości i w kursywie. Złoty obrys pokazuje bazę bez niej.</p></div>
-    <div class="overlay">__FLANK__<small>Wypełnienie: Lamina. Złoty obrys: ta sama litera bez zasady.</small></div>
-  </div>
-  <div class="vs">
-    <div><small>Z zasadą</small><div class="big">GOOD 08</div><div class="line">Płyta kamienia owinięta wokół słupa.</div></div>
-    <div><small>Bez zasady</small><div class="big off" style="font-family:NoFlank">GOOD 08</div><div class="line off" style="font-family:NoFlank">Płyta kamienia owinięta wokół słupa.</div></div>
-  </div>
-</section>
-
-<section>
-  <div class="law">
-    <div><span class="n">Zasada 3</span><h3>Kropka jak płytka</h3>
-      <p><strong>Każda kropka to mała płytka kamienia z giętymi rogami.</strong> Ta sama krzywa narożnika co w brzuścach, tylko w skali kropki: i, j, ż, ö, kropka, wykrzyknik, pytajnik, dwukropek. W bazie kropki są ostrymi kwadratami.</p></div>
+    <div><span class="n">Zasada 2</span><h3>Kropka jak płytka</h3>
+      <p><strong>Każda kropka to mała płytka kamienia z giętymi rogami.</strong> Ta sama krzywa narożnika co w brzuścach, tylko w skali kropki: i, j, ż, ö, kropka, wielokropek, wykrzyknik, pytajnik, dwukropek, punktor, także w kursywie. W bazie kropki są ostrymi kwadratami.</p></div>
     <div></div>
   </div>
   <div class="vs">
@@ -205,7 +200,7 @@ footer a{color:inherit}
 </section>
 
 <section>
-  <div class="head"><span class="label">Alfabet i cyfry</span><h2>Każdy znak w tej samej proporcji i z tym samym bokiem</h2></div>
+  <div class="head"><span class="label">Alfabet i cyfry</span><h2>Pełny zestaw w jednej temperaturze</h2></div>
   <div class="set">
     <div>ABCDEFGHIJKLMNOPQRSTUVWXYZ</div>
     <div>abcdefghijklmnopqrstuvwxyz</div>
@@ -217,9 +212,9 @@ footer a{color:inherit}
 
 <section>
   <div class="head"><span class="label">Cyfry</span><h2>Cyfry jak litery najwyższej wagi</h2>
-  <p class="lede">Cyfry mają jeden rysunek. Cyfry tabelaryczne to ten sam rysunek na równej szerokości, więc ceny w kolumnie stoją jedna pod drugą. W bazie funkcja tabelaryczna poszerzała też spację między słowami; w Laminie dotyczy tylko cyfr, więc tabela z tekstem nie rozjeżdża się. Wpisany między liczbami „x” sam zamienia się w znak mnożenia: 1200 x 600.</p></div>
+  <p class="lede">Cyfry mają jeden rysunek. Domyślnie są tabelaryczne, więc ceny w kolumnie stoją jedna pod drugą bez żadnego CSS; w tekście ciągłym można przełączyć je na proporcjonalne.</p></div>
   <div class="figs">
-    <div><span class="label">Tabelaryczne</span><div class="col">12 480,00 zł<br>9 315,60 zł<br>1 111,10 zł<br>407,90 zł</div></div>
+    <div><span class="label">Domyślne, tabelaryczne</span><div class="col">12 480,00 zł<br>9 315,60 zł<br>1 111,10 zł<br>407,90 zł</div></div>
     <div><span class="label">Proporcjonalne</span><div class="prop">12 480,00 zł<br>9 315,60 zł<br>1 111,10 zł<br>407,90 zł</div></div>
     <div><span class="label">Jeden rysunek</span><div class="giant">2026</div></div>
   </div>
@@ -283,7 +278,7 @@ footer a{color:inherit}
   </div>
 </section>
 
-<footer><p>Lamina 2.000. Na bazie <a href="https://github.com/zalando/sans">Zalando Sans</a> (Jakob Ekelund, KH Type, Zalando, licencja SIL Open Font License 1.1). Lamina zmienia proporcję (szerokość 86), krzywe pionowe (flanki), kropki (płytki), funkcję cyfr tabelarycznych i nazwy; nie używa zastrzeżonej nazwy „Zalando”.</p></footer>
+<footer><p>Lamina 3.000. Na bazie <a href="https://github.com/marcologous/hanken-grotesk">Hanken Grotesk</a> (Alfredo Marco Pradil, Hanken Design Co., licencja SIL Open Font License 1.1). Lamina zmienia odstępy małych liter i cyfr (proporcje Diatype), kropki (płytki), lekko prostuje pionowe krzywe, przenosi strzałki „-&gt;” z domyślnych ligatur do opcjonalnych i nadaje nowe nazwy.</p></footer>
 </main>
 
 <script>
@@ -309,10 +304,8 @@ def main():
     ctl = ROOT / "build" / "control"
     html = (PAGE.replace("__VF__", b64(web / "Lamina[wght].woff2"))
             .replace("__VFI__", b64(web / "Lamina-Italic[wght].woff2"))
-            .replace("__NF__", b64(ctl / "noflank.woff2"))
             .replace("__NT__", b64(ctl / "notile.woff2"))
-            .replace("__UP__", b64(ctl / "upstream100.woff2"))
-            .replace("__FLANK__", flank_svg())
+            .replace("__UP__", b64(ctl / "hanken.woff2"))
             .replace("__COUNT__", str(glyph_count())))
     out = ROOT / "specimen.html"
     out.write_text(html)

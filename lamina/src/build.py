@@ -1,19 +1,19 @@
 #!/usr/bin/env python3
-"""Lamina 2 — built on Zalando Sans (KH Type, OFL).
+"""Lamina 3 — built on Hanken Grotesk (Alfredo Marco Pradil, Hanken Design Co., OFL).
 
     python3 lamina/src/build.py            # masters, variable font, statics, WOFF2, CSS
     python3 lamina/src/build.py --masters  # only the edited UFO masters
-    LAMINA_WITHOUT=flank,tile ...          # control builds for the specimen
+    LAMINA_WITHOUT=flank,tile,space ...    # control builds for the specimen
 
 Pipeline
-  1. Zalando Sans source (.glyphs, 18 masters) -> designspace
-  2. two new masters interpolated at width 86: 400 and 700
+  1. Hanken Grotesk sources (.glyphs: Thin, Regular, Black; upright and italic)
+  2. two masters interpolated at 400 and 700
   3. Lamina edits on both masters (identical, so they stay compatible):
-       flank  — curves that turn vertical get longer handles: bowls stand
-                on straighter sides, the lamella rhythm
+       space  — lowercase and figures set closer, to Diatype's proportions
        tile   — every dot becomes a small stone tile with bent corners
-       space  — slightly tighter spacing for a compact text colour
-       names  — new family name (the upstream Reserved Font Name is not used)
+       flank  — curves that turn vertical get slightly longer handles
+       liga   — arrow ligatures moved from liga to dlig
+       names  — new family name, upstream attribution kept
   4. variable font (wght 400–700), static 400/500/600/700, hinted, WOFF2
 """
 import argparse
@@ -31,14 +31,13 @@ HERE = Path(__file__).resolve().parent
 ROOT = HERE.parent
 BUILD = ROOT / "build"
 FONTS = ROOT / "fonts"
-UPSTREAM = ROOT / "sources" / "upstream" / "ZalandoSans.glyphs"
+UPSTREAM = {False: ROOT / "sources" / "upstream" / "HankenGrotesk.glyphs",
+            True: ROOT / "sources" / "upstream" / "HankenGrotesk-Italic.glyphs"}
 sys.path.insert(0, str(HERE))
 
 FAMILY = "Lamina"
-VERSION = (2, 0)
-WIDTH_USER = 86.0
-# design coordinates of the upstream weight axis for 400 and 700
-W400, W700 = 94.0, 174.0
+VERSION = (3, 0)
+W400, W700 = 400.0, 700.0
 WEIGHTS = [("Regular", 400), ("Medium", 500), ("SemiBold", 600), ("Bold", 700)]
 WITHOUT = set(filter(None, os.environ.get("LAMINA_WITHOUT", "").split(",")))
 
@@ -47,57 +46,50 @@ def run(cmd, **kw):
     subprocess.run(cmd, check=True, capture_output=True, **kw)
 
 
-def upstream_designspace():
-    out = BUILD / "upstream"
+def upstream_designspace(italic=False):
+    out = BUILD / ("upstream-italic" if italic else "upstream")
     ds = out / "upstream.designspace"
     if not ds.exists():
         out.mkdir(parents=True, exist_ok=True)
-        run(["fontmake", "-g", str(UPSTREAM), "-o", "ufo", "--master-dir", str(out),
+        run(["fontmake", "-g", str(UPSTREAM[italic]), "-o", "ufo", "--master-dir", str(out),
              "--designspace-path", str(ds)])
     return ds
 
 
-def width_design(user):
-    """Upstream wdth map: 75->396, 87.5->473, 100->547."""
-    pts = [(75, 396), (87.5, 473), (100, 547), (112.5, 620), (125, 730)]
-    for (u0, d0), (u1, d1) in zip(pts, pts[1:]):
-        if u0 <= user <= u1:
-            return d0 + (user - u0) / (u1 - u0) * (d1 - d0)
-    raise ValueError(user)
-
-
-def base_masters(slant=0.0):
-    """Interpolate the two masters at our width."""
-    tag = "Italic" if slant else "Upright"
+def base_masters(italic=False):
+    """Interpolate the two masters, 400 and 700, from the upstream design space."""
+    tag = "Italic" if italic else "Upright"
     out = BUILD / f"base-{tag}"
     want = [out / f"Base-{s}.ufo" for s in ("Regular", "Bold")]
     if all(p.exists() for p in want):
         return want
-    doc = DesignSpaceDocument.fromfile(upstream_designspace())
+    doc = DesignSpaceDocument.fromfile(upstream_designspace(italic))
     doc.instances = []
-    wd = width_design(WIDTH_USER)
     for name, wt in (("Regular", W400), ("Bold", W700)):
         i = InstanceDescriptor()
         i.familyName, i.styleName = "Base", name
         i.filename = str(out / f"Base-{name}.ufo")
-        i.location = {"Width": wd, "Weight": wt, "Slant": slant}
+        i.location = {"Weight": wt}
         doc.addInstance(i)
-    tmp = BUILD / "upstream" / f"base-{tag}.designspace"
+    tmp = upstream_designspace(italic).parent / f"base-{tag}.designspace"
     doc.write(tmp)
     run(["fontmake", "-m", str(tmp), "-o", "ufo", "-i"])
     return want
 
 
-def masters(slant=0.0):
+def masters(italic=False):
     import edits
-    out = BUILD / ("masters-italic" if slant else "masters")
+    out = BUILD / ("masters-italic" if italic else "masters")
     if out.exists():
         shutil.rmtree(out)
     out.mkdir(parents=True)
     paths = {}
-    for src, style in zip(base_masters(slant), ("Regular", "Bold")):
+    srcs = base_masters(italic)
+    # a dot is tiled only where it is a dot in both masters, so they stay compatible
+    dots = set.intersection(*(edits.dot_candidates(ufoLib2.Font.open(p)) for p in srcs))
+    for src, style in zip(srcs, ("Regular", "Bold")):
         font = ufoLib2.Font.open(src)
-        edits.apply(font, style, italic=bool(slant), without=WITHOUT)
+        edits.apply(font, style, italic=italic, without=WITHOUT, dots=dots)
         dst = out / f"{FAMILY}-{style}.ufo"
         font.save(dst, overwrite=True)
         paths[style] = dst
@@ -143,7 +135,7 @@ def main():
         release.variable(designspace(paths), Path(args.out))
         print(args.out)
         return
-    release.run(designspace(paths), italic_ds=designspace(masters(-10.0), italic=True) if args.italic else None)
+    release.run(designspace(paths), italic_ds=designspace(masters(True), italic=True) if args.italic else None)
 
 
 if __name__ == "__main__":
