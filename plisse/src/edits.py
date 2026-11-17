@@ -146,7 +146,7 @@ def dot_candidates(font):
     """(glyph, contour index) pairs that are dots in this master."""
     sh = _shear(font)
     out = set()
-    for name in DOT_GLYPHS:
+    for name in [n for n in font.keys() if _has_dots(n)]:
         if name in font:
             for i, c in enumerate(font[name].contours):
                 if _is_dot(c, sh):
@@ -168,8 +168,15 @@ DOT_GLYPHS = {"period", "colon", "semicolon", "ellipsis", "exclam", "exclamdown"
               "dieresiscomb", "dieresiscomb.case", "dieresistonos", "divide", "twodotenleader", "bullet"}
 
 
+def _has_dots(name):
+    """Dot glyphs, and ligatures built from i or j (f_i, f_f_i): their dot is
+    the same tile."""
+    base = name.split(".")[0]
+    return name in DOT_GLYPHS or ("_" in base and any(p in ("i", "j") for p in base.split("_")))
+
+
 def tile(glyph, without, allowed=None, shear=0.0):
-    if "tile" in without or glyph.name not in DOT_GLYPHS:
+    if "tile" in without or not _has_dots(glyph.name):
         return 0
     n = 0
     for idx, c in enumerate(glyph.contours):
@@ -238,9 +245,10 @@ def footless_one(font, without):
 # Polish reads its acute as a kreska: steeper and more compact than the
 # Western acute. Plissé's acute stands at 62° (upstream 50°), keeps its
 # stroke weight and taper, and keeps its place right of the anchor. The
-# grave of Murèlle's è is its mirror, so the two accents rhyme.
+# grave of Murèlle's è is its mirror, so the two accents rhyme; the double
+# acute of ő ű takes the same angle.
 KRESKA_ANGLE = 62.0
-KRESKA_GLYPHS = ("acutecomb", "gravecomb")
+KRESKA_GLYPHS = ("acutecomb", "gravecomb", "hungarumlautcomb")
 
 
 def kreska(font, without):
@@ -317,10 +325,183 @@ def tile_zero(font, without):
                for p in dot.points]
         g.contours.append(Contour(points=pts))
         made.append((base, name))
+        # the tiled zero kerns exactly like its zero
+        for grp, members in font.groups.items():
+            if grp.startswith(("public.kern1.", "public.kern2.")) and base in members:
+                members.append(name)
+        for (l, r), v in list(font.kerning.items()):
+            if l == base:
+                font.kerning[(name, r)] = v
+            if r == base:
+                font.kerning[(l, name)] = v
     if made:
         rules = "".join(f"  sub {a} by {b};\n" for a, b in made)
         font.features.text += "\nfeature zero {\n" + rules + "} zero;\n"
     return len(made)
+
+
+# --- the extras --------------------------------------------------------------------
+# Characters a stone price list needs and Instrument Sans does not have:
+# m² and m³, ¹, ½ ¼ ¾, ± ≤ ≥ ≠, ′ ″ and the spaces numbers are set with.
+# Small figures are drawn from Plissé's own figures, taken from a heavier
+# point between the two masters before they are scaled down, so their strokes
+# keep the weight of the text around them.
+SMALL = 0.62                      # small figure size, share of the cap height
+SMALL_WEIGHT = {"Regular": 0.55, "Bold": 1.35}   # where between the masters they are drawn from
+DIGIT_NAMES = ("zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine")
+
+
+def _outline(font, name):
+    """Point lists of a glyph, components drawn out."""
+    from fontTools.pens.pointPen import SegmentToPointPen
+    from fontTools.pens.recordingPen import DecomposingRecordingPen
+    rec = DecomposingRecordingPen(font)
+    font[name].draw(rec)
+    from fontTools.pens.recordingPen import RecordingPointPen
+    rp = RecordingPointPen()
+    rec.replay(SegmentToPointPen(rp))
+    return rp.value
+
+
+def _blend(a, b, t):
+    """Interpolate two recorded point-pen outlines of the same structure."""
+    out = []
+    for (op, args, kw), (op2, args2, kw2) in zip(a, b):
+        assert op == op2
+        if op == "addPoint":
+            (x, y), (x2, y2) = args[0], args2[0]
+            out.append((op, ((x + (x2 - x) * t, y + (y2 - y) * t),) + tuple(args[1:]), kw))
+        else:
+            out.append((op, args, kw))
+    return out
+
+
+def _draw(glyph, rec, transform=(1, 0, 0, 1, 0, 0)):
+    from fontTools.pens.transformPen import TransformPointPen
+    pen = TransformPointPen(glyph.getPointPen(), transform)
+    for op, args, kw in rec:
+        getattr(pen, op)(*args, **kw)
+
+
+def _bounds(rec):
+    xs = [a[0][0] for op, a, kw in rec if op == "addPoint"]
+    ys = [a[0][1] for op, a, kw in rec if op == "addPoint"]
+    return min(xs), min(ys), max(xs), max(ys)
+
+
+def _rect_contour(glyph, pts):
+    pen = glyph.getPointPen()
+    pen.beginPath()
+    for x, y in pts:
+        pen.addPoint((x, y), "line")
+    pen.endPath()
+
+
+def extras(fonts, without=()):
+    """fonts: {"Regular": font, "Bold": font}. Adds the same glyphs, with the
+    same structure, to both masters."""
+    if "extras" in without:
+        return 0
+    reg, bold = fonts["Regular"], fonts["Bold"]
+    made = 0
+    for style, font in fonts.items():
+        cap = font.info.capHeight
+        t = SMALL_WEIGHT[style]
+        stroke = _bounds(_outline(font, "minus"))
+        stroke = stroke[3] - stroke[1]
+        side = 22 if style == "Regular" else 26
+        small = {}
+        # small figures: superior (top on the cap height) and inferior (on the baseline)
+        for d in DIGIT_NAMES:
+            rec = _blend(_outline(reg, d), _outline(bold, d), t)
+            w = reg[d].width + (bold[d].width - reg[d].width) * t
+            x0, _, x1, _ = _bounds(rec)
+            adv = round((x1 - x0) * SMALL + 2 * side)
+            for kind, dy in (("sups", cap * (1 - SMALL)), ("dnom", 0)):
+                name = f"{d}.{kind}"
+                g = font.newGlyph(name)
+                g.width = adv
+                _draw(g, rec, (SMALL, 0, 0, SMALL, side - x0 * SMALL, dy))
+                small[name] = g
+        for cp, d in ((0x00B9, "one"), (0x00B2, "two"), (0x00B3, "three")):
+            name = {"one": "onesuperior", "two": "twosuperior", "three": "threesuperior"}[d]
+            g = font.newGlyph(name)
+            g.width = small[f"{d}.sups"].width
+            g.unicodes = [cp]
+            g.components.append(_comp(f"{d}.sups"))
+        # fraction slash: from the baseline to the cap height, leaning like the slash
+        fs = font.newGlyph("fraction")
+        fs.unicodes = [0x2044]
+        lean = 0.42 * cap
+        th = stroke * 0.95
+        _rect_contour(fs, [(0, 0), (th * 1.1, 0), (th * 1.1 + lean, cap), (lean, cap)])
+        fs.width = round(th * 1.1 + lean)
+        fw = fs.width
+        # vulgar fractions: numerator, slash, denominator, set so that nothing touches
+        gap = stroke * 1.1
+        for cp, name, n, dd in ((0x00BD, "onehalf", "one", "two"), (0x00BC, "onequarter", "one", "four"),
+                                (0x00BE, "threequarters", "three", "four")):
+            g = font.newGlyph(name)
+            g.unicodes = [cp]
+            num, den = small[f"{n}.sups"], small[f"{dd}.dnom"]
+            nb = _bounds(_outline(font, num.name))
+            db = _bounds(_outline(font, den.name))
+            # slash x at height y: s + y * lean / cap (left edge)
+            k = lean / cap
+            s = nb[2] + gap - nb[1] * k                  # left edge clears the numerator at its lowest point
+            dx = s + db[3] * k + th * 1.1 + gap - db[0]  # denominator clears the slash at its highest point
+            g.components.append(_comp(num.name))
+            g.components.append(_comp("fraction", s))
+            g.components.append(_comp(den.name, dx))
+            g.width = round(dx + den.width)
+        # ± ≤ ≥ : the operator raised, a minus as the bar on the baseline
+        for cp, name, top in ((0x00B1, "plusminus", "plus"), (0x2264, "lessequal", "less"),
+                              (0x2265, "greaterequal", "greater")):
+            g = font.newGlyph(name)
+            g.unicodes = [cp]
+            tb = _bounds(_outline(font, top))
+            mb = _bounds(_outline(font, "minus"))
+            g.components.append(_comp("minus", 0, -mb[1]))
+            g.components.append(_comp(top, 0, stroke + stroke * 1.25 - tb[1]))
+            g.width = font[top].width
+        # ≠ : equal crossed by a stroke as heavy as the bars
+        g = font.newGlyph("notequal")
+        g.unicodes = [0x2260]
+        g.components.append(_comp("equal"))
+        eb = _bounds(_outline(font, "equal"))
+        cx, cy = (eb[0] + eb[2]) / 2, (eb[1] + eb[3]) / 2
+        h = (eb[3] - eb[1]) + 2 * stroke * 1.6
+        lx = h * 0.36
+        w2 = stroke * 0.55
+        _rect_contour(g, [(cx - lx / 2 - w2, cy - h / 2), (cx - lx / 2 + w2, cy - h / 2),
+                          (cx + lx / 2 + w2, cy + h / 2), (cx + lx / 2 - w2, cy + h / 2)])
+        g.width = font["equal"].width
+        # ′ ″ : the straight quote, leaned like the slash
+        q = _outline(font, "quotesingle")
+        qb = _bounds(q)
+        shear = 0.28
+        for cp, name, n in ((0x2032, "minute", 1), (0x2033, "second", 2)):
+            g = font.newGlyph(name)
+            g.unicodes = [cp]
+            step = (qb[2] - qb[0]) * 1.15
+            for i in range(n):
+                _draw(g, q, (1, 0, shear, 1, -qb[1] * shear + i * step, 0))
+            g.width = round(font["quotesingle"].width + (n - 1) * step + (qb[3] - qb[1]) * shear * 0.5)
+        # spaces
+        space = font["space"].width
+        for cp, name, w in ((0x2009, "thinspace", round(space * 0.6)), (0x202F, "narrownbspace", round(space * 0.6)),
+                            (0x200A, "hairspace", round(space * 0.3)), (0x2008, "punctuationspace", font["period"].width),
+                            (0x2007, "figurespace", font["zero.tf"].width)):
+            g = font.newGlyph(name)
+            g.unicodes = [cp]
+            g.width = w
+        made = len(small) + 16
+    return made
+
+
+def _comp(base, dx=0, dy=0):
+    from ufoLib2.objects import Component
+    return Component(baseGlyph=base, transformation=(1, 0, 0, 1, dx, dy))
 
 
 # --- the guard -------------------------------------------------------------------
@@ -333,7 +514,7 @@ def tile_zero(font, without):
 GUARD_GAP = 25
 GUARD_MIN = 8
 GUARD_CHARS = ("abcdefghijklmnopqrstuvwxyząćęłńóśźżèéàüöä"
-               "ABCDEFGHIJKLMNOPQRSTUVWXYZĄĆĘŁŃÓŚŹŻ0123456789.,:;!?()-'\"/&€%")
+               "ABCDEFGHIJKLMNOPQRSTUVWXYZĄĆĘŁŃÓŚŹŻ0123456789.,:;!?()-'\"/&€%²³±×")
 _STEP = 4
 
 
@@ -429,14 +610,14 @@ def guard(fonts):
 
 # --- names -----------------------------------------------------------------------
 
-def rename(font, style, italic):
+def rename(font, style):
     from build import FAMILY, FILE, VERSION
     i = font.info
-    sty = style if not italic else ("Italic" if style == "Regular" else f"{style} Italic")
+    sty = style
     i.familyName = FAMILY
     i.styleName = sty
     i.styleMapFamilyName = FAMILY
-    i.styleMapStyleName = {"Regular": "regular", "Bold": "bold", "Italic": "italic", "Bold Italic": "bold italic"}.get(sty, "regular")
+    i.styleMapStyleName = {"Regular": "regular", "Bold": "bold"}.get(sty, "regular")
     i.versionMajor, i.versionMinor = VERSION
     i.copyright = ("Copyright 2026 The Plissé Project Authors. Based on Instrument Sans, "
                    "Copyright 2022 The Instrument Sans Project Authors (https://github.com/Instrument/instrument-sans)")
@@ -544,7 +725,7 @@ def tighten(font, without):
     return n
 
 
-def apply(font, style, italic=False, without=(), dots=None):
+def apply(font, style, without=(), dots=None):
     features(font)
     q_tail(font, without)
     stats = {"forms": forms(font, without), "kreska": kreska(font, without), "tile": 0}
@@ -556,6 +737,6 @@ def apply(font, style, italic=False, without=(), dots=None):
     if "space" not in without:
         PRE[id(font)] = pair_gaps(font)
     stats["tight"] = tighten(font, without)
-    rename(font, style, italic)
+    rename(font, style)
     font.lib["plisse.stats"] = stats
     return stats

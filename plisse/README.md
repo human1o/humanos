@@ -43,16 +43,20 @@ masters and to the italic):
 5. **Figures.** Proportional by default, as in Diatype, so a 1 never stands
    in a hole in text and headlines; tables and prices use `tnum`
    (`font-variant-numeric: tabular-nums`).
-6. **No surprise ligatures.** `->`, `<-` and `www` move from `liga` to the
+6. **What a price list needs.** Small figures for m² m³ ¹ and ½ ¼ ¾ are
+   drawn from Plissé's own figures, taken from a heavier point between the
+   masters before scaling so they keep the weight of the text; ± ≤ ≥ ≠, ′ ″
+   and the thin, narrow no-break and figure spaces are added.
+7. **No surprise ligatures.** `->`, `<-` and `www` move from `liga` to the
    optional `dlig`, so what people type in forms stays what they typed.
-7. **Names.** New family name, attribution kept as the licence requires.
+8. **Names.** New family name, attribution kept as the licence requires.
 
 | | |
 | --- | --- |
 | Weights | 400–700 variable; static Regular, Medium, SemiBold, Bold |
-| Styles | upright and italic |
+| Styles | upright (no italic, by design) |
 | Figures | proportional by default, `tnum` for tables and prices |
-| Characters | 343 (Latin incl. full Polish and è) |
+| Characters | 361 (Latin incl. full Polish and è; m² m³ ½ ¼ ¾ ± ≤ ≥ ≠ ′ ″; thin, narrow no-break and figure spaces) |
 | Files | `fonts/web` (WOFF2 + `plisse.css`), `fonts/ttf` (hinted), `fonts/variable` |
 | Licence | SIL Open Font License 1.1 — see `OFL.txt` |
 
@@ -68,7 +72,8 @@ body { font-family: var(--font-plisse); }
 
 ```sh
 pip install fontmake fonttools ufoLib2 skia-pathops brotli ttfautohint-py
-python3 plisse/src/build.py --italic     # fonts/variable, fonts/ttf, fonts/web
+python3 plisse/src/build.py              # fonts/variable, fonts/ttf, fonts/web
+python3 plisse/src/check.py              # 65 release checks, exit 1 on any failure
 # control fonts for the specimen's "with / without" comparisons
 PLISSE_WITHOUT=tile  python3 plisse/src/build.py --out plisse/build/control/notile.ttf
 PLISSE_WITHOUT=forms python3 plisse/src/build.py --out plisse/build/control/noforms.ttf
@@ -80,7 +85,8 @@ f=I(T('plisse/build/control/upstream-full.ttf'),{'wdth':100}); f.flavor='woff2';
 python3 plisse/src/specimen.py           # specimen.html, fonts embedded
 ```
 
-- `sources/upstream/` — Instrument Sans sources (`.glyphs`, upright and italic), licence and authors
+- `sources/upstream/` — Instrument Sans sources (`.glyphs`, upright), licence and authors
 - `src/build.py` — interpolates the two masters, applies the edits, compiles
 - `src/edits.py` — the Plissé rules: forms, Q tail, one, kreska, tiles, tile zero, spacing, features, names
-- `src/release.py` — variable font, statics, hinting, WOFF2, CSS
+- `src/release.py` — variable font (overlap flags), statics (overlaps removed), hinting, WOFF2, CSS
+- `src/check.py` — release checks: OTS, names, metrics, characters, tiles, features, figures, accents, spacing

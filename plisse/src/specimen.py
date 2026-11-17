@@ -39,7 +39,6 @@ PAGE = r'''<meta charset="utf-8">
 <style>
 /* Layout: one quiet column on warm white, like a showroom wall; the letters are the only image. */
 @font-face{font-family:"Plisse";src:url(data:font/woff2;base64,__VF__) format("woff2");font-weight:400 700;font-style:normal;font-display:block}
-@font-face{font-family:"Plisse";src:url(data:font/woff2;base64,__VFI__) format("woff2");font-weight:400 700;font-style:italic;font-display:block}
 @font-face{font-family:"NoTile";src:url(data:font/woff2;base64,__NT__) format("woff2");font-weight:400 700;font-display:block}
 @font-face{font-family:"Upstream";src:url(data:font/woff2;base64,__UP__) format("woff2");font-weight:400 700;font-display:block}
 @font-face{font-family:"NoKreska";src:url(data:font/woff2;base64,__NK__) format("woff2");font-weight:400 700;font-display:block}
@@ -117,9 +116,6 @@ section{display:flex;flex-direction:column;gap:30px}
 .btns{display:flex;gap:10px;flex-wrap:wrap}
 .btn{font-size:15px;font-weight:500;border-radius:11px;padding:11px 18px;border:1px solid var(--dark);background:var(--dark);color:var(--on-dark)}
 .btn.ghost{background:transparent;color:var(--ink);border-color:var(--rule)}
-.italic{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:1px;background:var(--rule);border:1px solid var(--rule);border-radius:14px;overflow:hidden}
-.italic div{background:var(--panel);padding:20px 20px 18px;font-style:italic;font-size:clamp(34px,4.6vw,56px);line-height:1.06;letter-spacing:-.02em;min-width:0}
-.italic small{display:block;font-style:normal;font-size:12px;color:var(--muted);letter-spacing:0;margin-top:8px}
 .tester{border:1px solid var(--rule);border-radius:14px;background:var(--panel);overflow:hidden}
 .controls{display:flex;flex-wrap:wrap;gap:14px 26px;align-items:center;padding:14px 18px;border-bottom:1px solid var(--rule);font-size:13px;color:var(--muted)}
 .controls label{display:flex;align-items:center;gap:10px}
@@ -173,11 +169,11 @@ footer a{color:inherit}
   <span class="label">Krój pisma Murèlle i Lamelio</span>
   <h1 class="mark">Plissé</h1>
   <p class="idea">Cienki arkusz złożony w równy, pionowy rytm. Litery są okrągłe jak kamień, który się gnie, i stoją równo jak lamele w ścianie.</p>
-  <div class="meta"><span>400–700, font zmienny</span><span>prosty i kursywa</span><span>__COUNT__ znaków</span><span>pełna polszczyzna</span><span>licencja OFL</span></div>
+  <div class="meta"><span>400–700, font zmienny</span><span>4 grubości</span><span>__COUNT__ znaków</span><span>pełna polszczyzna</span><span>licencja OFL</span></div>
   <div class="names">
     <div><b style="font-weight:400">Murèlle</b><span>400 Regular</span></div>
     <div><b style="font-weight:500">Lamelio</b><span>500 Medium</span></div>
-    <div><b style="font-weight:600;font-style:italic">Murèlle</b><span>600 SemiBold Italic</span></div>
+    <div><b style="font-weight:600">Murèlle</b><span>600 SemiBold</span></div>
     <div><b style="font-weight:700">Lamelio</b><span>700 Bold</span></div>
   </div>
 </section>
@@ -222,7 +218,7 @@ footer a{color:inherit}
 <section>
   <div class="law">
     <div><span class="n">Zasada 2</span><h3>Kropka jak płytka</h3>
-      <p><strong>Każda kropka to mała płytka kamienia z giętymi rogami.</strong> Arkusz kamienia nie ma ostrych krawędzi, więc kropka też nie: i, j, ż, ö, kropka, wielokropek, wykrzyknik, pytajnik, dwukropek, punktor, także w kursywie. Ta sama płytka może stanąć w środku zera (funkcja <code>zero</code>), żeby w numerach zamówień 0 nigdy nie myliło się z O. W bazie kropki są ostrymi kwadratami.</p></div>
+      <p><strong>Każda kropka to mała płytka kamienia z giętymi rogami.</strong> Arkusz kamienia nie ma ostrych krawędzi, więc kropka też nie: i, j, ż, ö, kropka, wielokropek, wykrzyknik, pytajnik, dwukropek, punktor, także w ligaturze fi. Ta sama płytka może stanąć w środku zera (funkcja <code>zero</code>), żeby w numerach zamówień 0 nigdy nie myliło się z O. W bazie kropki są ostrymi kwadratami.</p></div>
     <div></div>
   </div>
   <div class="vs">
@@ -262,7 +258,7 @@ footer a{color:inherit}
     <div>abcdefghijklmnopqrstuvwxyz</div>
     <div>0123456789</div>
     <div class="sm">ĄĆĘŁŃÓŚŹŻ ąćęłńóśźż è ß æ œ ø</div>
-    <div class="sm">&amp; @ € $ % “ ” „ ” « » ( ) [ ] { } / → ↗ ± × ÷ ≤ ≥ ½</div>
+    <div class="sm">&amp; @ € $ % “ ” „ ” « » ( ) [ ] { } / → ↗ ± × ÷ ≤ ≥ ≠ ½ ¼ ¾ m² m³ 5′3″</div>
   </div>
 </section>
 
@@ -279,7 +275,7 @@ footer a{color:inherit}
 <section>
   <div class="head"><span class="label">Akapit</span><h2>Tekst, który czyta się bez zmęczenia</h2></div>
   <div class="para">
-    <div><small>16 px · 400</small><p style="font-size:16px;line-height:1.55">Murèlle to cienkie arkusze prawdziwego kamienia: trawertynu, wapienia, łupka. Są tak elastyczne, że owijają łuk, słup i narożnik ściany. Kamień, który się nie łamie, tylko gnie. Lamelio to ściany z lamel: pionowy rytm, ta sama szerokość, ten sam odstęp, a resztę robi światło. <i>Żadnego blichtru, tylko ciepła biel, faktura i światło.</i></p></div>
+    <div><small>16 px · 400</small><p style="font-size:16px;line-height:1.55">Murèlle to cienkie arkusze prawdziwego kamienia: trawertynu, wapienia, łupka. Są tak elastyczne, że owijają łuk, słup i narożnik ściany. Kamień, który się nie łamie, tylko gnie. Lamelio to ściany z lamel: pionowy rytm, ta sama szerokość, ten sam odstęp, a resztę robi światło. Żadnego blichtru, tylko ciepła biel, faktura i światło.</p></div>
     <div><small>13 px · 400 i 600</small><p style="font-size:13px;line-height:1.55">Zamówienie <b style="font-weight:600">MU-2026-01184</b> zostało przyjęte. Flexible Stone, Travertino Avorio, format 1200 × 600 mm, 48 szt. Dostawa w czwartek, 19 listopada, na adres: ul. Źródlana 7, 50-541 Wrocław. Gwarancja jakości obejmuje każdą płytę; łączenia wykonujemy bez fug.</p>
       <small style="margin-top:14px">12 px · 600, wersaliki</small><p class="label" style="font-size:12px;color:var(--ink)">Panel partnera · Zamówienia (3) · Konfigurator ściany</p></div>
   </div>
@@ -300,14 +296,6 @@ footer a{color:inherit}
         <tr><td class="code">MU-2026-01160</td><td>Quarzite Rosso, 12 szt.</td><td><span class="st wait">Czeka na płatność</span></td><td>3 708,90 zł</td></tr>
       </table>
     </div>
-  </div>
-</section>
-
-<section>
-  <div class="head"><span class="label">Kursywa</span><h2>Prawdziwa kursywa w każdej grubości</h2></div>
-  <div class="italic">
-    <div style="font-weight:400">Kamień, który się nie łamie<small>Italic 400</small></div>
-    <div style="font-weight:700">tylko gnie.<small>Bold Italic 700</small></div>
   </div>
 </section>
 
@@ -336,7 +324,7 @@ footer a{color:inherit}
     <div class="controls">
       <label for="wt">Grubość <input id="wt" type="range" min="400" max="700" value="400" step="1"><output id="wto">400</output></label>
       <label for="sz">Rozmiar <input id="sz" type="range" min="12" max="160" value="64"><output id="szo">64</output></label>
-      <div class="seg"><button id="it" aria-pressed="false">Kursywa</button><button id="tn" aria-pressed="false">Cyfry tabelaryczne</button></div>
+      <div class="seg"><button id="tn" aria-pressed="false">Cyfry tabelaryczne</button></div>
     </div>
     <div id="sample" contenteditable="true" spellcheck="false" aria-label="Tekst próbny">Zażółć gęślą jaźń. Plissé 12 480,00 zł</div>
   </div>
@@ -346,26 +334,25 @@ footer a{color:inherit}
   <div class="head"><span class="label">Pliki</span><h2>Gotowe do sieci i do instalacji</h2></div>
   <div class="facts">
     <div><b>400–700</b><span>font zmienny oraz 4 grubości statyczne</span></div>
-    <div><b>Prosty i kursywa</b><span>8 plików TTF z hintingiem dla Windows</span></div>
+    <div><b>4 pliki TTF</b><span>z hintingiem dla Windows, do instalacji</span></div>
     <div><b>__COUNT__ znaków</b><span>łacina europejska, w tym pełna polszczyzna</span></div>
     <div><b>OFL 1.1</b><span>wolno używać komercyjnie</span></div>
   </div>
 </section>
 
-<footer><p>Plissé 1.000, krój pisma Murèlle i Lamelio. Na bazie <a href="https://github.com/Instrument/instrument-sans">Instrument Sans</a> (Rodrigo Fuenzalida, Jordan Egstad, licencja SIL Open Font License 1.1). Plissé ustawia szerokość i grubość według Diatype, zagęszcza małe litery, zamienia kropki na płytki, dodaje zero z płytką, rysuje nowy ogonek Q i polską kreskę, wybiera formy R, $ i ¢, zdejmuje stopkę z jedynki tabelarycznej i stawia ją na osi zera, pilnuje, żeby żadna para liter się nie stykała, przenosi strzałki „-&gt;” i „www” z domyślnych ligatur do opcjonalnych i nadaje nowe nazwy.</p></footer>
+<footer><p>Plissé 1.001, krój pisma Murèlle i Lamelio. Na bazie <a href="https://github.com/Instrument/instrument-sans">Instrument Sans</a> (Rodrigo Fuenzalida, Jordan Egstad, licencja SIL Open Font License 1.1). Plissé ustawia szerokość i grubość według Diatype, zagęszcza małe litery, zamienia kropki na płytki, dodaje zero z płytką, rysuje nowy ogonek Q i polską kreskę, wybiera formy R, $ i ¢, zdejmuje stopkę z jedynki tabelarycznej i stawia ją na osi zera, pilnuje, żeby żadna para liter się nie stykała, dodaje m², m³, ułamki, ±, ≤, ≥, ≠ i spacje do liczb, przenosi strzałki „-&gt;” i „www” z domyślnych ligatur do opcjonalnych i nadaje nowe nazwy.</p></footer>
 </main>
 
 <script>
 (function(){
-  var s=document.getElementById('sample'),sz=document.getElementById('sz'),so=document.getElementById('szo'),wt=document.getElementById('wt'),wto=document.getElementById('wto'),it=document.getElementById('it'),tn=document.getElementById('tn');
-  var ital=false,tab=false;
+  var s=document.getElementById('sample'),sz=document.getElementById('sz'),so=document.getElementById('szo'),wt=document.getElementById('wt'),wto=document.getElementById('wto'),tn=document.getElementById('tn');
+  var tab=false;
   function apply(){
     var max=Math.max(12,(s.clientWidth-36)/3.2);
     s.style.fontSize=Math.min(+sz.value,max)+'px';so.textContent=sz.value;
     s.style.fontWeight=wt.value;wto.textContent=wt.value;
-    s.style.fontStyle=ital?'italic':'normal';s.style.fontVariantNumeric=tab?'tabular-nums':'normal';
+s.style.fontVariantNumeric=tab?'tabular-nums':'normal';
   }
-  it.addEventListener('click',function(){ital=!ital;it.setAttribute('aria-pressed',String(ital));apply();});
   tn.addEventListener('click',function(){tab=!tab;tn.setAttribute('aria-pressed',String(tab));apply();});
   sz.addEventListener('input',apply);wt.addEventListener('input',apply);window.addEventListener('resize',apply);apply();
 })();
@@ -388,7 +375,6 @@ def main():
     web = ROOT / "fonts" / "web"
     ctl = ROOT / "build" / "control"
     html = (nbsp(PAGE).replace("__VF__", b64(web / "Plisse[wght].woff2"))
-            .replace("__VFI__", b64(web / "Plisse-Italic[wght].woff2"))
             .replace("__NT__", b64(ctl / "notile.woff2"))
             .replace("__UP__", b64(ctl / "upstream.woff2"))
             .replace("__NF__", b64(ctl / "noforms.woff2"))
