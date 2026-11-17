@@ -224,6 +224,15 @@ def refeature(font):
     text = text.replace("feature zero;\n\n} aalt;",
                         "feature zero;\nfeature ss01;\nfeature ss02;\nfeature ss03;\n\n} aalt;")
     assert "feature ss01;" in text
+    # tabular figures: only the digits take the fixed width — upstream also
+    # widens . , : ; # %, which tears prices apart in running text ("480 , 00")
+    head, tnum, tail = text.partition("feature tnum {")
+    body, end, rest = tail.partition("} tnum;")
+    for name in ("period", "comma", "colon", "semicolon", "numbersign", "percent"):
+        line = f"sub {name} by {name}.tf;\n"
+        assert line in body, name
+        body = body.replace(line, "")
+    text = head + tnum + body + end + rest
     font.features.text = text.rstrip() + "\n" + STYLISTIC_SETS
 
 
@@ -251,9 +260,10 @@ def rename(font, style):
     i.postscriptFullName = f"{FAMILY} {style}"
     i.openTypeNameUniqueID = None
     i.openTypeNameVersion = None
-    for key in [k for k in font.lib if "glyphs" in k.lower() and "Axis" not in k
-                and k.startswith("com.schriftgestaltung.customParameter.GSFont.")]:
-        pass
+    i.styleMapFamilyName = FAMILY if style in ("Regular", "Bold") else f"{FAMILY} {style}"
+    i.styleMapStyleName = "bold" if style == "Bold" else "regular"
+    i.openTypeNamePreferredFamilyName = FAMILY
+    i.openTypeNamePreferredSubfamilyName = style
 
 
 # --------------------------------------------------------------------------
@@ -397,6 +407,73 @@ def remove_glyph(font, name):
             font.groups[k] = [n for n in v if n != name]
 
 
+# --------------------------------------------------------------------------
+# interface symbols (not in upstream)
+# --------------------------------------------------------------------------
+
+def _stroke(points, w):
+    """Outline of an open polyline of width w: butt caps, mitred joins."""
+    import math
+
+    def normal(a, b):
+        dx, dy = b[0] - a[0], b[1] - a[1]
+        n = math.hypot(dx, dy)
+        return (-dy / n, dx / n)
+
+    def side(sign):
+        out = []
+        for k, pt in enumerate(points):
+            if k == 0:
+                n = normal(points[0], points[1])
+                out.append((pt[0] + sign * n[0] * w / 2, pt[1] + sign * n[1] * w / 2))
+            elif k == len(points) - 1:
+                n = normal(points[-2], points[-1])
+                out.append((pt[0] + sign * n[0] * w / 2, pt[1] + sign * n[1] * w / 2))
+            else:
+                n1, n2 = normal(points[k - 1], pt), normal(pt, points[k + 1])
+                mx, my = n1[0] + n2[0], n1[1] + n2[1]
+                scale = (w / 2) / (mx * n1[0] + my * n1[1])
+                out.append((pt[0] + sign * mx * scale, pt[1] + sign * my * scale))
+        return out
+
+    return side(-1) + side(1)[::-1]
+
+
+def _new_glyph(font, name, unicode, width, after):
+    g = font.newGlyph(name)
+    g.unicodes = [unicode]
+    g.width = width
+    order = font.lib.get("public.glyphOrder")
+    if order is not None and name not in order:
+        order.insert(order.index(after) + 1, name)
+    return g
+
+
+def _polygon(g, pts):
+    pen = g.getPen()
+    pen.moveTo((round(pts[0][0]), round(pts[0][1])))
+    for q in pts[1:]:
+        pen.lineTo((round(q[0]), round(q[1])))
+    pen.closePath()
+
+
+def add_symbols(font, p):
+    """Check mark, filled circle and sort / disclosure triangles, drawn to
+    the weight and height of the upstream arrows."""
+    g = _new_glyph(font, "checkmark", 0x2713, 1300, "whiteCircle")
+    _polygon(g, _stroke([(196, 640), (510, 318), (1104, 1068)], p.lerp(156, 330)))
+    g = _new_glyph(font, "blackCircle", 0x25CF, font["whiteCircle"].width, "whiteCircle")
+    g.contours.append(copy.deepcopy(font["whiteCircle"].contours[0]))
+    tri = {
+        "upBlackTriangle": (0x25B2, [(170, 264), (1130, 264), (650, 1096)]),
+        "rightBlackTriangle": (0x25B6, [(234, 200), (1066, 680), (234, 1160)]),
+        "downBlackTriangle": (0x25BC, [(170, 1096), (650, 264), (1130, 1096)]),
+        "leftBlackTriangle": (0x25C0, [(1066, 200), (1066, 1160), (234, 680)]),
+    }
+    for name, (uni, pts) in tri.items():
+        _polygon(_new_glyph(font, name, uni, 1300, "blackCircle"), pts)
+
+
 def pre(font, p):
     rec = (record(font), record_ligatures(font))
     duplicate(font, "I", "I.ss03")
@@ -410,6 +487,7 @@ def pre(font, p):
 def post(font, p, rec):
     reattach(font, rec[0])
     romanize(font)
+    add_symbols(font, p)
     remove_glyph(font, "version")
     religate(font, rec[1])
     rekern(font)

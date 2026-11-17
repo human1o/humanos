@@ -63,6 +63,19 @@ def finish(font, variable):
     font["gasp"] = gasp
 
 
+def autohint(path):
+    """Static fonts get TrueType hints for Windows rasterisers (the variable
+    font is left unhinted, as ttfautohint cannot hint variations)."""
+    try:
+        from ttfautohint import ttfautohint
+    except ImportError:
+        print("ttfautohint not installed; static fonts left unhinted")
+        return
+    tmp = path.with_suffix(".hinted.ttf")
+    ttfautohint(in_file=str(path), out_file=str(tmp), no_info=True)
+    tmp.replace(path)
+
+
 def save_woff2(src, dst):
     f = TTFont(src)
     f.flavor = "woff2"
@@ -91,5 +104,6 @@ def run(paths):
         finish(inst, variable=False)
         p = static_dir / f"{FAMILY}-{style}.ttf"
         inst.save(p)
+        autohint(p)
         save_woff2(p, web_dir / f"{FAMILY}-{style}.woff2")
     print("fonts:", vf_path)

@@ -1,0 +1,18 @@
+/* Lico — variable font, weights 300–900. Paths are relative to this file. */
+@font-face {
+  font-family: "Lico";
+  src: url("Lico-Variable.woff2") format("woff2-variations"),
+       url("Lico-Variable.woff2") format("woff2");
+  font-weight: 300 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root {
+  --font-lico: "Lico", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+/* Opt-in details */
+.lico-tabular { font-variant-numeric: tabular-nums; }              /* tables, prices */
+.lico-code    { font-feature-settings: "ss02", "ss03", "zero"; }   /* SKUs: bent l, serifed I, slashed 0 */
+.lico-caps    { font-feature-settings: "case"; letter-spacing: 0.04em; } /* all-caps labels */
