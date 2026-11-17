@@ -22,6 +22,8 @@ DROP_FEATURES = ("ss01", "ss05", "ss09", "ss12")   # ss01 = round dots, against 
 # counter, at 59 % of the bowl's width and 30 % of the cap height, and ends
 # under the bowl's right flank, just below the baseline.
 Q_START = (0.59, 0.30)
+import os as _os0
+Q_RIGHT_GROUP = _os0.environ.get("PLISSE_QRIGHT", "") == "O"
 Q_END = (0.875, -0.05)
 
 
@@ -51,6 +53,16 @@ def q_tail(font, without):
            (E[0] + n[0] * h, E[1] + n[1] * h), (S[0] + n[0] * h, S[1] + n[1] * h)]
     for p, (x, y) in zip(pts, new):
         p.x, p.y = x + y * sh, y
+    # the long tail's kerning does not fit the new tail: the Q is spaced by
+    # its own sidebearing on the right
+    for grp in list(font.groups):
+        if grp.startswith("public.kern1.") and "Q.ss09" in font.groups[grp]:
+            font.groups[grp] = [n for n in font.groups[grp] if n != "Q.ss09"]
+    for (l, r) in [k for k in font.kerning if k[0] == "Q.ss09"]:
+        del font.kerning[(l, r)]
+    k1 = {n: grp for grp, ms in font.groups.items() if grp.startswith("public.kern1.") for n in ms}
+    if Q_RIGHT_GROUP and "O" in k1:
+        font.groups[k1["O"]].append("Q.ss09")
     return 1
 
 
@@ -97,13 +109,28 @@ def forms(font, without):
         for c in g.components:
             if c.baseGlyph in m:
                 c.baseGlyph = m[c.baseGlyph]
+    side = {pre: {n: g for g, ms in font.groups.items() if g.startswith(pre) for n in ms}
+            for pre in ("public.kern1.", "public.kern2.")}
     for k, v in list(font.groups.items()):
         font.groups[k] = [m.get(n, n) for n in v]
+    # An alternate that upstream left out of a side's kerning group (the R's
+    # left side is the same stem as B's, the $'s left side the S's) takes the
+    # default glyph's group for that side, so its spacing keeps its kerning.
+    for a, b in pairs:
+        for pre, member in side.items():
+            if b not in member and a in member and a not in font.groups[member[a]]:
+                font.groups[member[a]].append(a)
+    keep = []   # glyph-level pairs of the default that its alternate had no own value for
+    for a, b in pairs:
+        keep += [((a, r), v) for (l, r), v in font.kerning.items() if l == a and (b, r) not in font.kerning]
+        keep += [((l, a), v) for (l, r), v in font.kerning.items() if r == a and (l, b) not in font.kerning]
     for (l, r), v in list(font.kerning.items()):
         nl, nr = m.get(l, l), m.get(r, r)
         if (nl, nr) != (l, r):
             del font.kerning[(l, r)]
             font.kerning[(nl, nr)] = v
+    for (l, r), v in keep:
+        font.kerning[(m.get(l, l) if l not in m else l, m.get(r, r) if r not in m else r)] = v
     t = font.features.text
     for ss in DROP_FEATURES:
         t = re.sub(r"feature %s \{.*?\} %s;\n?" % (ss, ss), "", t, flags=re.S)
@@ -208,36 +235,50 @@ def tile(glyph, without, allowed=None, shear=0.0):
 
 
 # --- the one ---------------------------------------------------------------------
-# Upstream's tabular 1 stands on a foot; Diatype's 1 never does. Plissé's
-# tabular 1 (tnum) is the proportional drawing, its ink centred on the
-# axis of the tabular 0: one figure, one drawing, in every column.
-def footless_one(font, without):
-    if "forms" in without or "one" not in font or "one.tf" not in font:
+# In tabular figures every figure gets the same width, and a bare 1 is left
+# standing in a hole (Plissé 1.000: "11" carried 175 units more white than an
+# average pair of figures). The tabular 1 is therefore drawn the way the
+# best tabular sets draw it: Instrument's footed 1, its flag lengthened and its
+# foot widened, set where the white on its two sides matches the other figures.
+# Measured over every pair of tabular figures (area of white between the
+# shapes, per band of the figure height): "11" +14, "81" -2, "18" +1 units
+# against the median pair, where Mona Sans has +52/+19 and Inter +175/+77.
+# Proportional figures (the default) keep the plain 1 of Diatype.
+import os as _os
+ONE_FLAG, ONE_FOOT, ONE_SHIFT = (float(v) for v in
+                                 _os.environ.get("PLISSE_ONE", "1.3,460,25").split(","))
+
+
+def tabular_one(font, without, base=None):
+    """Rebuild one.tf from upstream's footed tabular 1 (`base` = the
+    unedited master it comes from, whose one.tf still has the foot)."""
+    if "forms" in without or "one.tf" not in font:
         return 0
-    from fontTools.pens.basePen import BasePen
-    from fontTools.pens.transformPen import TransformPointPen
-    sh = _shear(font)
-
-    def ink(name):
-        """Leftmost and rightmost ink, measured upright (italic unsheared)."""
-        xs = []
-
-        class P(BasePen):
-            def _moveTo(s, p): xs.append(p[0] - p[1] * sh)
-            def _lineTo(s, p): xs.append(p[0] - p[1] * sh)
-            def _curveToOne(s, a, b, c): xs.extend(q[0] - q[1] * sh for q in (a, b, c))
-            def _qCurveToOne(s, a, b): xs.extend(q[0] - q[1] * sh for q in (a, b))
-        font[name].draw(P(font))
-        return min(xs), max(xs)
-    src, g = font["one"], font["one.tf"]
-    x0, x1 = ink("one")
-    # the 1 sits on the same axis as the tabular 0 (the middle of the cell
-    # upright; the italic figures' own axis in the italic)
-    z0, z1 = ink("zero.tf") if "zero.tf" in font else (0, g.width)
-    shift = (z0 + z1) / 2 - (x0 + x1) / 2
+    src = (base or font)["one.tf"]
+    if len(src.contours) != 2:
+        return 0
+    stem, foot = src.contours
+    pts = [(p.x, p.y, p.type, p.smooth) for p in stem.points]
+    sx0, sx1 = pts[0][0], pts[1][0]                 # the stem's left and right edge
+    stem_c = (sx0 + sx1) / 2
+    fy0, fy1 = min(p.y for p in foot.points), max(p.y for p in foot.points)
+    dx = src.width / 2 + ONE_SHIFT - stem_c
+    g = font["one.tf"]
     g.clearContours()
     g.clearComponents()
-    src.drawPoints(TransformPointPen(g.getPointPen(), (1, 0, 0, 1, shift, 0)))
+    g.width = src.width
+    pen = g.getPointPen()
+    pen.beginPath()
+    for x, y, typ, smooth in pts:
+        if x < sx0 - 0.5:                            # the flag: lengthened away from the stem
+            x = sx0 - (sx0 - x) * ONE_FLAG
+        pen.addPoint((x + dx, y), typ, smooth)
+    pen.endPath()
+    pen.beginPath()
+    for x, y in ((stem_c - ONE_FOOT / 2, fy0), (stem_c + ONE_FOOT / 2, fy0),
+                 (stem_c + ONE_FOOT / 2, fy1), (stem_c - ONE_FOOT / 2, fy1)):
+        pen.addPoint((x + dx, y), "line")
+    pen.endPath()
     return 1
 
 
@@ -504,6 +545,24 @@ def _comp(base, dx=0, dy=0):
     return Component(baseGlyph=base, transformation=(1, 0, 0, 1, dx, dy))
 
 
+# --- measured kerning ------------------------------------------------------------
+# Pairs the new forms set tighter than upstream, opened by the amount the
+# optical pair check (check.py, 10) measured against Instrument Sans: the
+# R's leg now drops almost straight, so the slash comes in under it.
+KERN_FIX = {("R", "slash"): {"Regular": 17, "Bold": 26}}
+
+
+def kern_fix(font, style, without):
+    if "forms" in without:
+        return 0
+    k1 = {n: g for g, ms in font.groups.items() if g.startswith("public.kern1.") for n in ms}
+    k2 = {n: g for g, ms in font.groups.items() if g.startswith("public.kern2.") for n in ms}
+    for (l, r), vals in KERN_FIX.items():
+        L, R = k1.get(l, l), k2.get(r, r)
+        font.kerning[(L, R)] = font.kerning.get((L, R), 0) + vals[style]
+    return len(KERN_FIX)
+
+
 # --- the guard -------------------------------------------------------------------
 # Setting the lowercase closer must never make two letters touch. Every pair
 # of the Polish and Latin alphabet, figures and punctuation is measured
@@ -725,15 +784,19 @@ def tighten(font, without):
     return n
 
 
+TABULAR_BASE = {}   # id(font) -> unedited master (set by build.py)
+
+
 def apply(font, style, without=(), dots=None):
     features(font)
     q_tail(font, without)
     stats = {"forms": forms(font, without), "kreska": kreska(font, without), "tile": 0}
-    footless_one(font, without)
+    tabular_one(font, without, base=TABULAR_BASE.get(id(font)))
     sh = _shear(font)
     for g in font:
         stats["tile"] += tile(g, without, dots, sh)
     stats["zero"] = tile_zero(font, without)
+    kern_fix(font, style, without)
     if "space" not in without:
         PRE[id(font)] = pair_gaps(font)
     stats["tight"] = tighten(font, without)

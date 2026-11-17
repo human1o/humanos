@@ -68,7 +68,7 @@ for s, p in STATICS.items():
     check(got == want, f"names {p.name}", str(got))
     allnames = " ".join(str(r) for r in n.names)
     check("Lamina" not in allnames and "Italic" not in allnames, f"no stale names {p.name}")
-    check(n.getDebugName(5).startswith("Version 1.001"), f"version {p.name}", n.getDebugName(5))
+    check(n.getDebugName(5).startswith("Version 1.002"), f"version {p.name}", n.getDebugName(5))
     os2 = TTFont(p)["OS/2"]
     check(os2.usWeightClass == WEIGHT[s] and os2.achVendID == "PLSE" and not (os2.fsSelection & 1),
           f"OS/2 {p.name}", f"{os2.usWeightClass} {os2.achVendID} {hex(os2.fsSelection)}")
@@ -147,16 +147,62 @@ fig = [n for n in tf if n.split(".")[0] in edits.DIGIT_NAMES]
 check(len({vf["hmtx"][n][0] for n in fig}) == 1, "tabular figure glyphs share one width",
       str(sorted({vf['hmtx'][n][0] for n in fig})))
 
-# 7 — the tabular 1 sits on the axis of the tabular 0 ------------------------------------------------
-for s, tt in instances():
-    gs = tt.getGlyphSet()
+# 7 — figures are evenly spaced: no figure (the 1 above all) stands in a hole ----------------------
+# Optical spacing: mean white between two figures per band of the cap height,
+# each side's depth clamped at 12 % of the cap height. A pair with a 1 may not
+# carry more than ONE_LIMIT units of white more (or less) than the median pair,
+# and pairs with a 1 may not spread wider than pairs without it.
+import statistics  # noqa: E402
+ONE_LIMIT = 60
 
-    def centre(n):
-        b = BoundsPen(gs)
-        gs[n].draw(b)
-        return (b.bounds[0] + b.bounds[2]) / 2
-    check(abs(centre("one.tf") - centre("zero.tf")) < 1.5, f"tabular 1 centred ({s})",
-          f"{centre('one.tf'):.1f} vs {centre('zero.tf'):.1f}")
+
+def optical(tt, feats):
+    gs = tt.getGlyphSet()
+    Fi = hbfont(tt)
+    cap = tt["OS/2"].sCapHeight
+    depth = 0.12 * cap
+
+    class G:
+        def __getitem__(self, k):
+            return gs[k]
+    cache = {}
+
+    def sides(n):
+        if n not in cache:
+            prof = edits._profile(G(), n, 0)
+            b = BoundsPen(gs)
+            gs[n].draw(b)
+            x0, _, x1, _ = b.bounds
+            adv = tt["hmtx"][n][0]
+            L, R = [], []
+            for yb in range(0, int(cap / edits._STEP) + 1):
+                l, r = prof.get(yb, (x1, x0))
+                L.append(min(l, x0 + depth))
+                R.append(min(adv - r, adv - x1 + depth))
+            cache[n] = (L, R)
+        return cache[n]
+    out = {}
+    for a in "0123456789":
+        for b in "0123456789":
+            sh = shape(Fi, a + b, feats)
+            (n1, adv, _, _), (n2, _, dx, _) = sh
+            kern = adv - tt["hmtx"][n1][0] + dx
+            R, L = sides(n1)[1], sides(n2)[0]
+            out[a + b] = statistics.mean(r + l for r, l in zip(R, L)) + kern
+    return out
+
+
+for s, tt in instances():
+    for label, feats in (("tabular", {"tnum": True}), ("text", {})):
+        o = optical(tt, feats)
+        rest = [v for k, v in o.items() if "1" not in k]
+        ones = [v for k, v in o.items() if "1" in k]
+        med = statistics.median(rest)
+        worst = max(((abs(v - med), k) for k, v in o.items() if "1" in k))
+        check(worst[0] <= ONE_LIMIT and statistics.pstdev(ones) <= statistics.pstdev(rest) * 1.1 + 2,
+              f"figure 1 evenly spaced, {label} ({s})",
+              f"worst {worst[1]} {worst[0]:+.0f}, '11' {o['11'] - med:+.0f}, '81' {o['81'] - med:+.0f}; "
+              f"spread with 1 {statistics.pstdev(ones):.0f} vs without {statistics.pstdev(rest):.0f}")
 
 # 8 — combining accents land where the precomposed letters have them --------------------------------
 PAIRS = {"ą": "ą", "ć": "ć", "ę": "ę", "ń": "ń", "ó": "ó", "ś": "ś",
@@ -210,6 +256,73 @@ for s, tt in instances():
             gap = min((adv + dx + p2[y][0] - p1[y][1] for y in set(p1) & set(p2)), default=1e9)
             worst = min(worst, (gap, a + b))
     check(worst[0] >= edits.GUARD_MIN - 1.5, f"no pair touches ({s})", f"closest {worst[1]!r} {worst[0]:.0f} units")
+
+# 10 — no pair is spaced worse than in Instrument Sans ------------------------------------------------
+# Same optical measure over every pair of letters, figures and punctuation,
+# each pair against the median of its kind (lower-lower, upper-lower, ...),
+# compared with upstream at the same width and weight. A pair may not become
+# more uneven than upstream by more than 25 units. Pairs with characters
+# upstream does not have (² ³) cannot be compared and are left out.
+UP = ROOT / "build" / "control" / "upstream-full.ttf"
+if not UP.exists():
+    UP.parent.mkdir(parents=True, exist_ok=True)
+    subprocess.run(["fontmake", "-g", str(ROOT / "sources" / "upstream" / "InstrumentSans.glyphs"), "-o", "variable",
+                    "--output-path", str(UP)], check=True, capture_output=True)
+PCH = "abcdefghijklmnopqrstuvwxyząćęłńóśźżèé" + "ABCDEFGHIJKLMNOPQRSTUVWXYZĄĆĘŁŃÓŚŹŻ" + "0123456789" + ".,:;!?()-/&€%$¢"
+
+
+def kind(c):
+    return "l" if c.islower() else "U" if c.isupper() else "d" if c.isdigit() else "p"
+
+
+def pair_optical(tt):
+    gs = tt.getGlyphSet()
+    Fi = hbfont(tt)
+    cap = tt["OS/2"].sCapHeight
+    depth = 0.12 * cap
+
+    class G:
+        def __getitem__(self, k):
+            return gs[k]
+    cache = {}
+
+    def sides(n):
+        if n not in cache:
+            prof = edits._profile(G(), n, 0)
+            b = BoundsPen(gs)
+            gs[n].draw(b)
+            x0, _, x1, _ = b.bounds or (0, 0, 0, 0)
+            adv = tt["hmtx"][n][0]
+            L, R = [], []
+            for yb in range(int(-0.25 * cap / edits._STEP), int(cap / edits._STEP) + 1):
+                l, r = prof.get(yb, (x1, x0))
+                L.append(min(l, x0 + depth))
+                R.append(min(adv - r, adv - x1 + depth))
+            cache[n] = (L, R)
+        return cache[n]
+    out = {}
+    for a in PCH:
+        for b in PCH:
+            sh = shape(Fi, a + b)
+            if len(sh) != 2:
+                continue
+            (n1, adv, _, _), (n2, _, dx, _) = sh
+            R, L = sides(n1)[1], sides(n2)[0]
+            out[a + b] = statistics.mean(r + l for r, l in zip(R, L)) + adv - tt["hmtx"][n1][0] + dx
+    groups = {}
+    for k, v in out.items():
+        groups.setdefault(kind(k[0]) + kind(k[1]), []).append(v)
+    med = {g: statistics.median(v) for g, v in groups.items()}
+    return {k: v - med[kind(k[0]) + kind(k[1])] for k, v in out.items()}
+
+
+for (s, tt), uw in zip(instances(), (430, 520, 610, 700)):
+    P = pair_optical(tt)
+    U = pair_optical(instancer.instantiateVariableFont(TTFont(UP), {"wght": uw, "wdth": 97}))
+    worse = sorted(((abs(P[k]) - abs(U[k]), k) for k in P if k in U), reverse=True)
+    bad = [w for w in worse if w[0] > 25]
+    check(not bad, f"no pair spaced worse than upstream ({s})",
+          ", ".join(f"{k!r} {d:+.0f}" for d, k in bad[:8]) or f"largest {worse[0][1]!r} {worse[0][0]:+.0f}")
 
 print()
 print(f"{len(FAILS)} FAIL" if FAILS else "ALL PASS")

@@ -230,7 +230,7 @@ footer a{color:inherit}
 <section>
   <div class="law">
     <div><span class="n">Zasada 3</span><h3>Formy, które się gną</h3>
-      <p><strong>Tam, gdzie baza ma dwie formy, Plissé wybiera tę bliższą Diatype i ją dociąga.</strong> R ma nogę wychodzącą z brzuśca i opadającą prawie pionowo. Ogonek Q zaczyna się w środku litery i kończy pod jej prawym bokiem; narysowaliśmy go od nowa według pomiaru z Diatype. Dolar i cent mają kreskę przeprowadzoną przez całą literę. Jedynka nigdy nie ma stopki, także w kolumnie cen, gdzie stoi na osi zera. Po prawej formy z bazy.</p></div>
+      <p><strong>Tam, gdzie baza ma dwie formy, Plissé wybiera tę bliższą Diatype i ją dociąga.</strong> R ma nogę wychodzącą z brzuśca i opadającą prawie pionowo. Ogonek Q zaczyna się w środku litery i kończy pod jej prawym bokiem; narysowaliśmy go od nowa według pomiaru z Diatype. Dolar i cent mają kreskę przeprowadzoną przez całą literę. W tekście jedynka nie ma stopki, jak w Diatype. W tabeli, gdzie każda cyfra ma tę samą szerokość, dostaje szeroką stopkę i dłuższą flagę, żeby nie stała w dziurze. Po prawej formy z bazy.</p></div>
     <div></div>
   </div>
   <div class="vs">
@@ -264,7 +264,7 @@ footer a{color:inherit}
 
 <section>
   <div class="head"><span class="label">Cyfry</span><h2>Cyfry jak litery najwyższej wagi</h2>
-  <p class="lede">Cyfry mają jeden rysunek. W tekście i w nagłówkach są proporcjonalne, jak w Diatype, więc jedynka nigdy nie stoi w dziurze. W tabelach i cennikach włącza się cyfry tabelaryczne (<code>font-variant-numeric: tabular-nums</code>): ta sama jedynka bez stopki, wyśrodkowana w kolumnie.</p></div>
+  <p class="lede">Cyfry mają jeden rysunek. W tekście i w nagłówkach są proporcjonalne, jak w Diatype, więc jedynka nigdy nie stoi w dziurze. W tabelach i cennikach włącza się cyfry tabelaryczne (<code>font-variant-numeric: tabular-nums</code>). Tam jedynka ma szeroką stopkę i dłuższą flagę, a białe pole po jej obu stronach jest takie jak przy innych cyfrach: „11” i „81” stoją równo z „00” i „88”.</p></div>
   <div class="figs">
     <div><span class="label">Tabelaryczne, w cenniku</span><div class="col">12 480,00 zł<br>9 315,60 zł<br>1 111,10 zł<br>407,90 zł</div></div>
     <div><span class="label">Domyślne, w tekście</span><div class="prop">12 480,00 zł<br>9 315,60 zł<br>1 111,10 zł<br>407,90 zł</div></div>
@@ -340,7 +340,7 @@ footer a{color:inherit}
   </div>
 </section>
 
-<footer><p>Plissé 1.001, krój pisma Murèlle i Lamelio. Na bazie <a href="https://github.com/Instrument/instrument-sans">Instrument Sans</a> (Rodrigo Fuenzalida, Jordan Egstad, licencja SIL Open Font License 1.1). Plissé ustawia szerokość i grubość według Diatype, zagęszcza małe litery, zamienia kropki na płytki, dodaje zero z płytką, rysuje nowy ogonek Q i polską kreskę, wybiera formy R, $ i ¢, zdejmuje stopkę z jedynki tabelarycznej i stawia ją na osi zera, pilnuje, żeby żadna para liter się nie stykała, dodaje m², m³, ułamki, ±, ≤, ≥, ≠ i spacje do liczb, przenosi strzałki „-&gt;” i „www” z domyślnych ligatur do opcjonalnych i nadaje nowe nazwy.</p></footer>
+<footer><p>Plissé 1.002, krój pisma Murèlle i Lamelio. Na bazie <a href="https://github.com/Instrument/instrument-sans">Instrument Sans</a> (Rodrigo Fuenzalida, Jordan Egstad, licencja SIL Open Font License 1.1). Plissé ustawia szerokość i grubość według Diatype, zagęszcza małe litery, zamienia kropki na płytki, dodaje zero z płytką, rysuje nowy ogonek Q i polską kreskę, wybiera formy R, $ i ¢, rysuje tabelaryczną jedynkę ze stopką tak, by nie stała w dziurze, pilnuje, żeby żadna para liter się nie stykała, dodaje m², m³, ułamki, ±, ≤, ≥, ≠ i spacje do liczb, przenosi strzałki „-&gt;” i „www” z domyślnych ligatur do opcjonalnych i nadaje nowe nazwy.</p></footer>
 </main>
 
 <script>

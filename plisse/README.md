@@ -36,13 +36,16 @@ masters):
    (upstream ss05) and $ ¢ with the full stroke (ss12) become the default.
    Q gets a new tail, measured on Diatype: it starts inside the counter (59 %
    of the bowl's width, 30 % of the cap height) and ends under the right
-   flank just below the baseline. The 1 never stands on a foot, not even in
-   the tabular figures, where it sits on the axis of the tabular 0.
+   flank just below the baseline. Upstream's alternates keep the kerning of
+   the glyph they replace wherever upstream gave them none of their own.
 4. **Polish kreska.** The acute stands at 62° instead of 50°, compact, with
    the same stroke weight; the grave of è mirrors it.
-5. **Figures.** Proportional by default, as in Diatype, so a 1 never stands
-   in a hole in text and headlines; tables and prices use `tnum`
-   (`font-variant-numeric: tabular-nums`).
+5. **Figures.** Proportional by default, as in Diatype, with the plain 1;
+   tables and prices use `tnum` (`font-variant-numeric: tabular-nums`). In
+   tabular figures the 1 gets a wide foot and a longer flag and is placed so
+   that the white on both its sides matches the other figures: measured as
+   mean white per band, "11" is +14 and "81" -2 units against the median pair
+   (Mona Sans +52/+19, Inter +175/+77; Plissé 1.001 had +175/+116).
 6. **What a price list needs.** Small figures for m² m³ ¹ and ½ ¼ ¾ are
    drawn from Plissé's own figures, taken from a heavier point between the
    masters before scaling so they keep the weight of the text; ± ≤ ≥ ≠, ′ ″
@@ -73,7 +76,7 @@ body { font-family: var(--font-plisse); }
 ```sh
 pip install fontmake fonttools ufoLib2 skia-pathops brotli ttfautohint-py
 python3 plisse/src/build.py              # fonts/variable, fonts/ttf, fonts/web
-python3 plisse/src/check.py              # 65 release checks, exit 1 on any failure
+python3 plisse/src/check.py              # release checks, exit 1 on any failure
 # control fonts for the specimen's "with / without" comparisons
 PLISSE_WITHOUT=tile  python3 plisse/src/build.py --out plisse/build/control/notile.ttf
 PLISSE_WITHOUT=forms python3 plisse/src/build.py --out plisse/build/control/noforms.ttf

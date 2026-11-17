@@ -37,7 +37,7 @@ sys.path.insert(0, str(HERE))
 
 FAMILY = "Plissé"          # the name people see in font menus
 FILE = "Plisse"            # ASCII: file names, PostScript names, CSS
-VERSION = (1, 1)
+VERSION = (1, 2)
 # upstream locations of Plissé's two masters (design coordinates)
 W400, W700 = 430.0, 700.0
 WIDTH = 96.875            # user wdth 97 through the upstream axis map 88→87.5
@@ -93,6 +93,7 @@ def masters():
     fonts = {}
     for src, style in zip(srcs, ("Regular", "Bold")):
         font = ufoLib2.Font.open(src)
+        edits.TABULAR_BASE[id(font)] = ufoLib2.Font.open(src)
         edits.apply(font, style, without=WITHOUT, dots=dots)
         fonts[style] = font
     edits.extras(fonts, WITHOUT)
