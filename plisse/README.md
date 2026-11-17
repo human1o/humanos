@@ -19,7 +19,7 @@ height. Instrument Sans came closest in roundness (round bowls, horizontally
 cut terminals on e c s, single-storey g, straight-tailed y, round 6 and 9).
 
 **What Plissé changes** (each change is a rule, applied the same way to both
-masters and to the italic):
+masters):
 
 1. **Diatype proportions.** Plissé's masters are Instrument Sans at width 97
    and weight 430 (Regular) and 700 (Bold): the stem and set width of
